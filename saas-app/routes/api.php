@@ -70,22 +70,11 @@ Route::group(['prefix' => 'manage', 'middleware' => 'CORS'], function ($router) 
 
 });
 
-Route::group(['prefix' => 'stl', 'middleware' => 'CORS'], function ($router) {
-	Route::post('/upload-stl', [StlController::class, 'uploadStlFile'])->name('stl.upload-stl');
-	Route::get('/stl-items', [StlController::class, 'getStlItems'])->name('stl.stl-items');
-	Route::get('/stl-item', [StlController::class, 'getStlItem'])->name('stl.stl-item');
-	Route::post('/stl-file', [StlController::class, 'getStlFile'])->name('stl.stl-file');
-});
-
-Route::group(['prefix' => 'gallery', 'middleware' => 'CORS'], function ($router) {
-	Route::get('/assets', [GalleryController::class, 'assets'])->name('assets.asset-items');
-	Route::post('/upload-media', [GalleryController::class, 'uploadMedia'])->name('gallery.upload-media');
-});
-
 Route::group(['prefix' => 'chat', 'middleware' => 'CORS'], function ($router) {
 	Route::post('/messages', [ChatController::class, 'message']);
 	Route::get('/messages', [ChatController::class, 'getMessages']);
 	Route::post('/typing', [ChatController::class, 'userTyping']);
+	Route::post('/thinking', [ChatController::class, 'thinking']);
 	Route::post('/upload', [ChatController::class, 'uploadMessage']);
 	Route::post('/capture-upload', [ChatController::class, 'captureUpload']);
 	Route::post('/upload-video', [ChatController::class, 'uploadVideo']);
