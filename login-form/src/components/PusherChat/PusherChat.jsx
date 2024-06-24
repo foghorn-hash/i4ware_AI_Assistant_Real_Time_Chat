@@ -548,7 +548,7 @@ const saveMessageToDatabase = async (message) => {
     </Modal>
     <Modal show={showCaptureVideoModal} onHide={handleCaptureVideoCloseModal}>
       <Modal.Header className='message-upload-modal' closeButton>
-        <Modal.Title className='massage-opload-title'>{strings.capture_video_with_message}</Modal.Title>
+        <Modal.Title className='massage-upload-title'>{strings.capture_video_with_message}</Modal.Title>
       </Modal.Header>
       <Modal.Body className='message-upload-modal'>
         {/* Add your content for image upload and message input here */}
