@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\Message;
 use App\Events\UserTyping;
+use App\Events\AiThinking;
 use App\Models\Message as MessageModel;
 use Illuminate\Http\Request;
 use App\Models\User;
@@ -73,9 +74,9 @@ class ChatController extends Controller
             ->where(function ($query) use ($user) {
                 $query->where('messages.domain', '=', $user->domain)
                     ->orWhere(function ($query) use ($user) {
-                        $query->where('messages.user_id', '=', 0)
+                        $query->where('messages.user_id', '=', null)
                                 ->where('messages.domain', '=', $user->domain);
-                    }); // Include messages with user_id = 0 only if domain matches
+                    }); // Include messages with user_id = NULL only if domain matches
             })
             ->orderBy('messages.created_at', 'desc')
             ->get()
@@ -242,7 +243,7 @@ class ChatController extends Controller
         // Create new message
         $message = new MessageModel();
         $message->username = "AI";
-        $message->user_id = 0;
+        $message->user_id = null;
         $message->domain = $user->domain;
         $message->message = $highlightedMessage;
         $message->save();
@@ -268,6 +269,16 @@ class ChatController extends Controller
         // Implement syntax highlighting logic using a library like `highlight.js` or `Prism.js`
         // For demonstration, you can use a placeholder method
         return $message; // Placeholder: return the original message (no syntax highlighting)
+    }
+
+    public function thinking(Request $request)
+    {
+        $user = "AI";
+        $isThinking = $request->isThinking;
+
+        broadcast(new AiThinking($user, $isThinking))->toOthers();
+
+        return response()->json(['status' => 'Thinking Message Sent!', 'message' => $isThinking]);
     }
 
     public function uploadVideo(Request $request)
