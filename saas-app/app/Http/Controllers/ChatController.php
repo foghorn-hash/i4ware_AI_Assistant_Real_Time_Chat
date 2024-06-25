@@ -356,4 +356,32 @@ class ChatController extends Controller
         return response()->json(['url' => Storage::url($fileName)]);
     }
 
+    public function transcribe(Request $request)
+    {
+        $request->validate([
+            'audio' => 'required|file|mimes:ogg,mp3,wav',
+        ]);
+
+        $user = Auth::user();
+
+        $audioFile = $request->file('audio');
+        $audioPath = $audioFile->store('audio', 'public');
+
+        // Ensure the audioPath is correctly processed
+        $transcription = $this->openaiService->transcribeSpeech($audioPath);
+
+        // Create a new record in the database
+        $message = new MessageModel();
+        $message->username = $user->name;
+        $message->user_id = $user->id;
+        $message->domain = $user->domain;
+        $message->message = $transcription ?? '';
+        $message->save();
+
+        // Trigger an event for the new message
+        event(new Message($user->name, $transcription));
+
+        return response()->json(['success' => true, 'transcription' => $transcription]);
+    }
+
 }

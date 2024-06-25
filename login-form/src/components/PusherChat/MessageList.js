@@ -77,7 +77,7 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
 
   const handleGenerateSpeech = async (text, gender, messageId) => {
     let voice;
-    
+
     if (gender === 'male') {
       voice = 'onyx';
     } else if (gender === 'female') {
