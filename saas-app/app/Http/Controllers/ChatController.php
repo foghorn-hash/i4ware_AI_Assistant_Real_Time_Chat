@@ -330,14 +330,58 @@ class ChatController extends Controller
 
     public function synthesize(Request $request)
     {
+        $messageId = $request->input('message_id');
         $text = $request->input('text');
         $voice = $request->input('voice', 'alloy');
+
+        // Retrieve the message by its ID
+        $message = MessageModel::find($messageId);
+
+        if ($message && $message->audio_path) {
+            // If audio_path is not null, return the existing audio path
+            return response()->json(['url' => Storage::url($message->audio_path)]);
+        }
+
         $audioContent = $this->openaiService->synthesizeSpeech($text, $voice);
 
         $fileName = 'audio/' . uniqid() . '.mp3';
         Storage::disk('public')->put($fileName, $audioContent);
 
+        // Update the message with the new audio path
+        if ($message) {
+            $message->audio_path = $fileName;
+            $message->save();
+        }
+
         return response()->json(['url' => Storage::url($fileName)]);
+    }
+
+    public function transcribe(Request $request)
+    {
+        $request->validate([
+            'audio' => 'required|file|mimes:ogg,mp3,wav',
+        ]);
+
+        $user = Auth::user();
+
+        $audioFile = $request->file('audio');
+        $audioPath = $audioFile->store('audio', 'public');
+
+        // Ensure the audioPath is correctly processed
+        $transcription = $this->openaiService->transcribeSpeech($audioPath);
+
+        // Create a new record in the database
+        $message = new MessageModel();
+        $message->username = $user->name;
+        $message->user_id = $user->id;
+        $message->domain = $user->domain;
+        $message->message = $transcription ?? '';
+        $message->save();
+
+        // Trigger an event for the new message
+        event(new Message($user->name, $transcription));
+
+        return response()->json(['success' => true, 'transcription' => $transcription]);
     }
 
 }
