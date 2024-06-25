@@ -75,10 +75,19 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
     scrollToBottom();
   }, [messages]);
 
-  const handleGenerateSpeech = async (text, gender) => {
-    let voice = gender === 'male' ? 'onyx' : 'shimmer'; // Choose voice based on gender for users
+  const handleGenerateSpeech = async (text, gender, messageId) => {
+    let voice;
+    
+    if (gender === 'male') {
+      voice = 'onyx';
+    } else if (gender === 'female') {
+      voice = 'shimmer';
+    } else {
+      voice = 'nova'; // Default voice if gender is not specified
+    }
+
     try {
-      const response = await Axios.post(API_BASE_URL + '/api/chat/tts', { text, voice }, {
+      const response = await Axios.post(API_BASE_URL + '/api/chat/tts', { text, voice, message_id: messageId }, {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
       });
       const audioUrl = response.data.url;
@@ -96,7 +105,7 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
           <div className='message-date'>
             <strong>{msg.username}: </strong>
             <i>{msg.formatted_created_at}</i>
-            <button className="message-TTS" onClick={() => handleGenerateSpeech(msg.message, msg.gender)}>Generate Speech</button>
+            <button className="message-TTS" onClick={() => handleGenerateSpeech(msg.message, msg.gender, msg.id)}>Generate Speech</button>
           </div>
           <div className='massage-container'>
             <img src={msg.profilePicUrl || msg.defaultImg} className='message-avatar' alt={`Profile of ${msg.username}`} />

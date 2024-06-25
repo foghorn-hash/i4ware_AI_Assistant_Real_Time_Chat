@@ -330,12 +330,28 @@ class ChatController extends Controller
 
     public function synthesize(Request $request)
     {
+        $messageId = $request->input('message_id');
         $text = $request->input('text');
         $voice = $request->input('voice', 'alloy');
+
+        // Retrieve the message by its ID
+        $message = MessageModel::find($messageId);
+
+        if ($message && $message->audio_path) {
+            // If audio_path is not null, return the existing audio path
+            return response()->json(['url' => Storage::url($message->audio_path)]);
+        }
+
         $audioContent = $this->openaiService->synthesizeSpeech($text, $voice);
 
         $fileName = 'audio/' . uniqid() . '.mp3';
         Storage::disk('public')->put($fileName, $audioContent);
+
+        // Update the message with the new audio path
+        if ($message) {
+            $message->audio_path = $fileName;
+            $message->save();
+        }
 
         return response()->json(['url' => Storage::url($fileName)]);
     }

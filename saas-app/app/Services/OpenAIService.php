@@ -58,13 +58,25 @@ class OpenAIService
                 $model = 'tts-1';
                 $voiceName = 'alloy';
                 break;
-            case 'shimmer':
+            case 'echo':
                 $model = 'tts-1';
-                $voiceName = 'shimmer';
+                $voiceName = 'echo';
+                break;
+            case 'fable':
+                $model = 'tts-1';
+                $voiceName = 'fable';
                 break;
             case 'onyx':
                 $model = 'tts-1';
                 $voiceName = 'onyx';
+                break;
+            case 'nova':
+                $model = 'tts-1';
+                $voiceName = 'nova';
+                break;
+            case 'shimmer':
+                $model = 'tts-1';
+                $voiceName = 'shimmer';
                 break;
             default:
                 throw new \Exception('Invalid voice parameter.');
