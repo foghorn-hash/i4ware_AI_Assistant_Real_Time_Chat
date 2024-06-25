@@ -7,14 +7,16 @@ use GuzzleHttp\Client;
 class OpenAIService
 {
     protected $client;
+    protected $apiKey;
 
     public function __construct()
     {
+        $this->apiKey = env('OPENAI_API_KEY');
         $this->client = new Client([
             'base_uri' => 'https://api.openai.com',
             'headers' => [
                 'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . env('OPENAI_API_KEY'),
+                'Authorization' => 'Bearer ' . $this->apiKey,
             ],
         ]);
     }
@@ -45,5 +47,37 @@ class OpenAIService
         ]);
 
         return json_decode($response->getBody(), true)['choices'][0]['message']['content'] ?? '';
+    }
+
+    public function synthesizeSpeech($text, $voice)
+    {
+
+         // Map voice parameter to appropriate model and voice
+         switch ($voice) {
+            case 'alloy':
+                $model = 'tts-1';
+                $voiceName = 'alloy';
+                break;
+            case 'shimmer':
+                $model = 'tts-1';
+                $voiceName = 'shimmer';
+                break;
+            case 'onyx':
+                $model = 'tts-1';
+                $voiceName = 'onyx';
+                break;
+            default:
+                throw new \Exception('Invalid voice parameter.');
+        }
+
+        $response = $this->client->post('/v1/audio/speech', [
+            'json' => [
+                'model' => $model,
+                'input' => $text,
+                'voice' => $voiceName,
+            ],
+        ]);
+
+        return $response->getBody()->getContents();
     }
 }

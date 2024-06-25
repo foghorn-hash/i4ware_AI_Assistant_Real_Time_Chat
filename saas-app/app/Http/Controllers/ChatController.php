@@ -328,4 +328,16 @@ class ChatController extends Controller
         return response()->json(['error' => 'Media file not found in request'], 400);
     }
 
+    public function synthesize(Request $request)
+    {
+        $text = $request->input('text');
+        $voice = $request->input('voice', 'alloy');
+        $audioContent = $this->openaiService->synthesizeSpeech($text, $voice);
+
+        $fileName = 'audio/' . uniqid() . '.mp3';
+        Storage::disk('public')->put($fileName, $audioContent);
+
+        return response()->json(['url' => Storage::url($fileName)]);
+    }
+
 }
