@@ -9,7 +9,7 @@ use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Auth;
 
-class UserTyping implements ShouldBroadcastNow
+class UserTypingPublic implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -25,7 +25,7 @@ class UserTyping implements ShouldBroadcastNow
     public function broadcastOn()
     {
         $user = Auth::user();
-        return new Channel($user->domain . '_chat');
+        return new Channel(env('APP_DOMAIN_ADMIN') . '_chat');
     }
 
     public function broadcastAs()

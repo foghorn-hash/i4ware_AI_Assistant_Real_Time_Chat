@@ -3,34 +3,35 @@
 namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PresenceChannel;
+use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
 use Auth;
 
-class UserTyping implements ShouldBroadcastNow
+class MessagePublic implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $username;
-    public $isTyping;
+    public $message;
 
-    public function __construct($username, $isTyping)
+    public function __construct($username, $message)
     {
         $this->username = $username;
-        $this->isTyping = $isTyping;
+        $this->message = $message;
     }
 
     public function broadcastOn()
     {
         $user = Auth::user();
-        return new Channel($user->domain . '_chat');
+        return new Channel(env('APP_DOMAIN_ADMIN') . '_chat');
     }
 
     public function broadcastAs()
     {
-        return 'user-typing';
+        return 'message';
     }
 }
-

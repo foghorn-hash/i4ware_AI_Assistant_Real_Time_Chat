@@ -96,7 +96,9 @@ let strings = new LocalizedStrings({
 });
 
 const PusherChat = () => {
-  const [username, setUsername] = useState(localStorage.getItem(ACCESS_USER_DATA) || 'Guest');
+  const authData = localStorage.getItem(ACCESS_USER_DATA);
+  const authArray = JSON.parse(authData);
+  const [username, setUsername] = useState(authArray.name || 'Guest');
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
   const [typingIndicator, setTypingIndicator] = useState('');
@@ -203,7 +205,7 @@ const PusherChat = () => {
 
   const initializePusher = () => {
     const pusher = new Pusher(API_PUSHER_KEY, { cluster: API_PUSHER_CLUSTER });
-    const channel = pusher.subscribe('chat');
+    const channel = pusher.subscribe(authArray.domain + '_chat');
 
     channel.bind('message', (newMessage) => {
         setMessages((prevMessages) => [newMessage, ...prevMessages]);

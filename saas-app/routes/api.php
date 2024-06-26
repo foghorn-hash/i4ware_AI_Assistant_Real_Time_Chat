@@ -11,6 +11,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StlController;
 use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\GuestController;
 
 /*
 |--------------------------------------------------------------------------
@@ -82,4 +83,15 @@ Route::group(['prefix' => 'chat', 'middleware' => 'CORS'], function ($router) {
 	Route::post('/save-message', [ChatController::class, 'saveMessageToDatabase']);
 	Route::post('/tts', [ChatController::class, 'synthesize']);
 	Route::post('/stt', [ChatController::class, 'transcribe']);
+});
+
+Route::group(['prefix' => 'guest', 'middleware' => 'CORS'], function ($router) {
+	Route::post('/messages', [GuestController::class, 'message']);
+	Route::get('/messages', [GuestController::class, 'getMessages']);
+	Route::post('/typing', [GuestController::class, 'userTyping']);
+	Route::post('/thinking', [GuestController::class, 'thinking']);
+	Route::post('/generate-response', [GuestController::class, 'generateResponse']);
+	Route::post('/save-message', [GuestController::class, 'saveMessageToDatabase']);
+	Route::post('/tts', [GuestController::class, 'synthesize']);
+	Route::post('/stt', [GuestController::class, 'transcribe']);
 });
