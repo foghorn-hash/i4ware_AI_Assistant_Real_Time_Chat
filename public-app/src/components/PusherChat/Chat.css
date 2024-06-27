@@ -9,22 +9,22 @@
 	margin: 0;
 	margin-left: 0%;
 	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
-  }
+}
 
-  .message-upload-modal {
+.message-upload-modal {
 	border: 0;
-  }
+}
 
-  .massage-upload-title {
+.massage-upload-title {
 	color: #111
-  }
+}
 
-  .message-upload-button {
+.message-upload-button {
 	margin-top: 10px;
 	margin-bottom: 10px;
-  }
+}
 
-  .message-textarea {
+.message-textarea {
 	width: 100%;
 	margin-top: 10px;
 	margin-bottom: 10px;
@@ -36,64 +36,31 @@
 	border: 2px solid #be1212;
 	background-color: #262626; 
 	color: #f2f2f2;
-  }
+}
 
-  .message-file-button {
+.message-file-button {
 	padding: 10px;
 	border-radius: 8px;
 	border: none;
 	background-color: #0d6efd;
 	color: #ffffff;
 	cursor: pointer;
-  }
+}
 
-  .message-file-selector {
+.message-file-selector {
 	display: none;
-  }
+}
 
-  .message-image {
+.message-image {
 	width: 25%;
-  }
+}
 
-  .Webcam-video {
+.Webcam-video {
 	width: 25%;
-  }
-  
-.message-upload-button {
-	padding: 10px;
-	border-radius: 8px;
-	border: none;
-	background-color: #0d6efd;
-	color: #ffffff;
-	cursor: pointer;
-	margin-right: 10px;
-}
-
-.Webcam-message {
-	width: 100%;
-}
-
-.message-capture-button {
-	padding: 10px;
-	border-radius: 8px;
-	border: none;
-	background-color: #0d6efd;
-	color: #ffffff;
-	cursor: pointer;
-	margin-right: 10px;
-}
-
-.message-capture-video-button {
-	padding: 10px;
-	border-radius: 8px;
-	border: none;
-	background-color: #0d6efd;
-	color: #ffffff;
-	cursor: pointer;
-	margin-right: 10px;
 }
 
 .message-record-audio-button {
+	margin-top: 50px;
 	padding: 10px;
 	border-radius: 8px;
 	border: none;

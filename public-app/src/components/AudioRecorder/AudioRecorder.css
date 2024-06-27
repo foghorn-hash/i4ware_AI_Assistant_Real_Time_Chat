@@ -7,6 +7,16 @@
 	cursor: pointer;
 }
 
+.audio-recorded {
+	width: 100%;
+}
+
+.audio-waveform {
+	background-color: black;
+	height: 128px;
+	margin-bottom: 20px;
+}
+
 .audio-recorder-clear {
 	clear: both;
 }
