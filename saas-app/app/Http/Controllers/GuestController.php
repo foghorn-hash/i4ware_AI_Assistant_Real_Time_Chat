@@ -138,6 +138,7 @@ class GuestController extends Controller
         $message->user_id = null;
         $message->domain = env('APP_DOMAIN_ADMIN');
         $message->message = $highlightedMessage;
+        $message->gender = $request->input('gender');
         $message->save();
 
         // Trigger an event for the new message
@@ -177,7 +178,7 @@ class GuestController extends Controller
     {
         $messageId = $request->input('message_id');
         $text = $request->input('text');
-        $voice = $request->input('voice', 'alloy');
+        $defaultVoice = $request->input('voice', 'alloy');
 
         // Retrieve the message by its ID
         $message = MessageModel::find($messageId);
@@ -185,6 +186,16 @@ class GuestController extends Controller
         if ($message && $message->audio_path) {
             // If audio_path is not null, return the existing audio path
             return response()->json(['url' => Storage::url($message->audio_path)]);
+        }
+
+        // Determine the voice based on the gender
+        $voice = $defaultVoice;
+        if ($message && $message->gender) {
+            if ($message->gender === 'male') {
+                $voice = 'onyx'; // Replace with the actual male voice ID
+            } else if ($message->gender === 'female') {
+                $voice = 'shimmer'; // Replace with the actual female voice ID
+            }
         }
 
         $audioContent = $this->openaiService->synthesizeSpeech($text, $voice);
@@ -219,6 +230,7 @@ class GuestController extends Controller
         $message->user_id = null;
         $message->domain = env('APP_DOMAIN_ADMIN');
         $message->message = $transcription ?? '';
+        $message->gender = $request->input('gender');
         $message->save();
 
         // Trigger an event for the new message

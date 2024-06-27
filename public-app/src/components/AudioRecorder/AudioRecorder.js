@@ -12,17 +12,23 @@ let strings = new LocalizedStrings({
   en: { 
     ask_from_ai: "Ask from AI",
     waveform: "Wavefrom",
-    volume: "Volume",
+    volume: "Volume Level Meter",
+    male: "Male",
+    female: "Female",
    },
   fi: { 
     ask_from_ai: "Kysy tekoälyltä",
     waveform: "Ääniraita",
-    volume: "Äänenvoimakkuus",
+    volume: "Äänenvoimakkuusmittari",
+    male: "Mies",
+    female: "Nainen",
   },
   se: { 
     ask_from_ai: "Fråga en AI",
     waveform: "ljudspår",
     volume: "ljudvolym",
+    male: "Man",
+    female: "Kvinna",
   }
 });
 
@@ -39,6 +45,7 @@ const AudioRecorder = (props) => {
   const analyserRef = useRef(null);
   const meterRef = useRef(null);
   const animationFrameIdRef = useRef(null);
+  const [gender, setGender] = useState('male');
 
   var query = window.location.search.substring(1);
   var urlParams = new URLSearchParams(query);
@@ -119,6 +126,7 @@ const AudioRecorder = (props) => {
         username: 'AI',
         message: highlightedHTML,
         messagePlain: response.data.response,
+        gender: gender,
         created_at: new Date().toISOString(),
       };
 
@@ -148,6 +156,7 @@ const AudioRecorder = (props) => {
 
       const formData = new FormData();
       formData.append('audio', blob, 'recording.mp3');
+      formData.append('gender', gender); // Append gender to the form data
 
       Axios.post(`${API_BASE_URL}/api/guest/stt`, formData).then(response => {
         console.log('Transcription result:', response.data.transcription);
@@ -167,6 +176,10 @@ const AudioRecorder = (props) => {
         mediaStreamRef.current.getTracks().forEach(track => track.stop());
       }
     });
+  };
+
+  const handleChange = (event) => {
+    setGender(event.target.value);
   };
 
   useEffect(() => {
@@ -208,6 +221,11 @@ const AudioRecorder = (props) => {
         checked={isAiEnabled}
         onChange={handleAiCheckboxChange}
       />
+      <div className='audio-recorder-clear' />
+      <select className='select-gender' id="gender" value={gender} onChange={handleChange}>
+        <option value="male">{strings.male}</option>
+        <option value="female">{strings.female}</option>
+      </select>
     </div>
   );
 };
