@@ -66,7 +66,7 @@ let strings = new LocalizedStrings({
     failed_to_upload_file: "Tiedoston lataus epäonnistui. Olehyvä ja yritä uudestaan.",
     your_browser_not_support_video_tag: "Selaimesi ei tue video tagia.",
     aiTypingIndicator: "Tekoäly miettii ...",
-    record_audio: "Spela in ljud",
+    record_audio: "Nauhoita ääni",
   },
   se: {
     send: "Skicka",
@@ -92,6 +92,7 @@ let strings = new LocalizedStrings({
     failed_to_upload_file: "Misslyckades med att ladda upp filen. Försök igen.",
     your_browser_not_support_video_tag: "Din webbläsare stöder inte videomarkeringen.",
     aiTypingIndicator: "AI tänker ...",
+    record_audio: "Spela in ljud",
   }
 });
 

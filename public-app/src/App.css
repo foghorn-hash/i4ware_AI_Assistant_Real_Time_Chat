@@ -1,3 +1,37 @@
+html, body {
+  background-color: black;
+}
+
 .App {
   text-align: center;
+}
+
+.App-header {
+  background-color: black;
+  text-align: left;
+}
+
+.App-logo {
+  margin: 10px;
+  height: 60px;
+}
+
+.App-main {
+ background-color: black;
+}
+
+.App-footer {
+ background-color: black;
+ color: aliceblue;
+ padding-top: 10px;
+}
+
+.language-selector {
+	position: absolute;
+	margin-right: 20px;
+	margin-left: 20px;
+	height: 38px;
+	border-radius: 5px;
+  right: 20px;
+  top: 20px;
 }

@@ -2,9 +2,9 @@
 .chat-container {
 	background-color: #1a1a1a;
 	color: #f2f2f2;
-	border-radius: 8px;
+	border-radius: 10px;
 	padding: 10px;
-	height: 100vh;
+	height: 86vh;
 	width: 100%;
 	margin: 0;
 	margin-left: 0%;
@@ -71,7 +71,7 @@
 }
 
   .messages-list {
-	height: 70vh;
+	height: 60vh;
 	overflow-y: auto;
 	border: 1px solid #333333;
 	padding: 10px;
