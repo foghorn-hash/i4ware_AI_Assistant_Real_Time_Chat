@@ -161,6 +161,7 @@ const AudioRecorder = (props) => {
       Axios.post(`${API_BASE_URL}/api/guest/stt`, formData).then(response => {
         console.log('Transcription result:', response.data.transcription);
         handleChatGPTResponse(response.data.transcription);
+        props.fetchMessages();
       }).catch(error => {
         console.error('Error uploading audio file:', error);
       });

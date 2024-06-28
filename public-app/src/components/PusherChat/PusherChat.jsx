@@ -140,7 +140,8 @@ const PusherChat = () => {
     const channel = pusher.subscribe(API_DOMAIN + '_chat');
 
     channel.bind('message', (newMessage) => {
-        setMessages((prevMessages) => [newMessage, ...prevMessages]);
+        //setMessages((prevMessages) => [newMessage, ...prevMessages]);
+        fetchMessages();
     });
 
     channel.bind('user-typing', ({ username: typingUsername, isTyping }) => {
@@ -231,7 +232,7 @@ const generateResponse = async () => {
     await saveMessageToDatabase(aiResponseMessage);
 
     // Update the messages state
-    setMessages((prevMessages) => [aiResponseMessage, ...prevMessages]);
+    //setMessages((prevMessages) => [aiResponseMessage, ...prevMessages]);
 
     // Handle AI response (display in chat, etc.)
     setIsThinking(false);
