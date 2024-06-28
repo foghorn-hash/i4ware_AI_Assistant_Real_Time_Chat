@@ -4,7 +4,7 @@
 	color: #f2f2f2;
 	border-radius: 10px;
 	padding: 10px;
-	height: 76vh;
+	height: 66vh;
 	width: 100%;
 	margin: 0;
 	margin-left: 0%;
@@ -71,7 +71,7 @@
 }
 
   .messages-list {
-	height: 50vh;
+	height: 40vh;
 	overflow-y: auto;
 	border: 1px solid #333333;
 	padding: 10px;
