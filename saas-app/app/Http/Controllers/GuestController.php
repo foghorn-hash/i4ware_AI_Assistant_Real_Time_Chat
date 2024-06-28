@@ -105,7 +105,6 @@ class GuestController extends Controller
 
     public function saveMessageToDatabase(Request $request)
     {       
-        $user = Auth::user();
 
         // Validate incoming request data
         $validator = Validator::make($request->all(), [
@@ -142,7 +141,7 @@ class GuestController extends Controller
         $message->save();
 
         // Trigger an event for the new message
-        event(new MessagePublic($user->name, $promptPlain));
+        event(new MessagePublic("AI", $promptPlain));
 
         return response()->json(['success' => 'Message saved successfully'], 200);
     }
