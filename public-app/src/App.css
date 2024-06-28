@@ -9,6 +9,7 @@ html, body {
 .App-header {
   background-color: black;
   text-align: left;
+  padding-top: 40px;
 }
 
 .App-logo {
@@ -33,5 +34,5 @@ html, body {
 	height: 38px;
 	border-radius: 5px;
   right: 20px;
-  top: 20px;
+  top: 65px;
 }
