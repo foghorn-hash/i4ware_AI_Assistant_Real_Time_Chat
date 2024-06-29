@@ -80,7 +80,6 @@ function App() {
         <PusherChat />
       </main>
       <footer className='App-footer'>
-        <img src={LOGO_COPY} alt="logo" className="App-logo-copyright" /> {strings.copyright}
       </footer>
     </div>
   );
