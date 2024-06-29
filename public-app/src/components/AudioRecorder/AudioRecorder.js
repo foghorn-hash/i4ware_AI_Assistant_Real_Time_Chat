@@ -64,6 +64,9 @@ const AudioRecorder = (props) => {
   const handleChatGPTResponse = (responseText) => {
     console.log('Received response from ChatGPT:', responseText);
     if (isAiEnabled) {
+      // Handle AI response (display in chat, etc.)
+      props.setIsThinking(true);
+      Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
       generateResponse(responseText);
     }
     props.fetchMessages();
@@ -80,6 +83,7 @@ const AudioRecorder = (props) => {
       setIsRecording(true);
       mediaStreamRef.current = stream;
       setupAudioLevelMeter(stream);
+      props.sendSpeechStatus(true);
     }).catch(err => {
       console.error('Error accessing microphone', err);
     });
@@ -131,6 +135,11 @@ const AudioRecorder = (props) => {
       };
 
       await saveMessageToDatabase(aiResponseMessage);
+
+      // Handle AI response (display in chat, etc.)
+      props.setIsThinking(false);
+      await Axios.post(`${API_BASE_URL}/api/chat/thinking`, { username: "AI", isThinking: false });
+
       props.fetchMessages();
     } catch (error) {
       console.error('Error:', error);
@@ -161,6 +170,8 @@ const AudioRecorder = (props) => {
       Axios.post(`${API_BASE_URL}/api/guest/stt`, formData).then(response => {
         console.log('Transcription result:', response.data.transcription);
         handleChatGPTResponse(response.data.transcription);
+        props.sendSpeechStatus(false);
+        props.setSpeechIndicator('');
         props.fetchMessages();
       }).catch(error => {
         console.error('Error uploading audio file:', error);

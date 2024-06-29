@@ -41,6 +41,7 @@ let strings = new LocalizedStrings({
     your_browser_not_support_video_tag: "Your browser does not support the video tag.",
     aiTypingIndicator: "AI is thinking...",
     record_audio: "Record Audio",
+    speech: "is recoding speech...",
   },
   fi: {
     send: "Lähetä",
@@ -67,6 +68,7 @@ let strings = new LocalizedStrings({
     your_browser_not_support_video_tag: "Selaimesi ei tue video tagia.",
     aiTypingIndicator: "Tekoäly miettii ...",
     record_audio: "Nauhoita ääni",
+    speech: "nauhoittaa puhetta...",
   },
   se: {
     send: "Skicka",
@@ -93,6 +95,7 @@ let strings = new LocalizedStrings({
     your_browser_not_support_video_tag: "Din webbläsare stöder inte videomarkeringen.",
     aiTypingIndicator: "AI tänker ...",
     record_audio: "Spela in ljud",
+    speech: "spela in tal...",
   }
 });
 
@@ -101,6 +104,7 @@ const PusherChat = () => {
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
   const [typingIndicator, setTypingIndicator] = useState('');
+  const [speechIndicator, setSpeechIndicator] = useState('');
   const [aiTypingIndicator, setAiTypingIndicator] = useState('');
   const [isAiEnabled, setIsAiEnabled] = useState(false); // State to track AI checkbox
   const typingTimeoutRef = useRef(null);
@@ -154,6 +158,12 @@ const PusherChat = () => {
         }
     });
 
+    channel.bind('user-speech', ({ username: speechUsername, isSpeech }) => {
+      if (isSpeech) {
+          setSpeechIndicator(`${speechUsername} ${strings.speech}`);
+      }
+    });
+
     channel.bind('ai-thinking', function (data) {
       setIsThinking(data.isThinking);
     });    
@@ -186,6 +196,10 @@ const PusherChat = () => {
 
   const sendTypingStatus = async (isTyping) => {
     await Axios.post(`${API_BASE_URL}/api/guest/typing`, { username, isTyping }).catch((error) => console.error('Error sending typing status', error));
+  };
+
+  const sendSpeechStatus = async (isSpeech) => {
+    await Axios.post(`${API_BASE_URL}/api/guest/speech`, { username, isSpeech }).catch((error) => console.error('Error sending speech status', error));
   };
 
   const submitMessage = async (e) => {
@@ -262,6 +276,7 @@ const saveMessageToDatabase = async (message) => {
       </Button>
       <MessageList messages={messages} DefaultMaleImage={DefaultMaleImage} DefaultFemaleImage={DefaultFemaleImage} />
       {typingIndicator && <div className="typing-indicator">{typingIndicator}</div>}
+      {speechIndicator && <div className="typing-indicator">{speechIndicator}</div>}
       {isThinking && <div className="typing-indicator">{strings.aiTypingIndicator}</div>}
       <form className="message-form">
         <div>
@@ -289,7 +304,7 @@ const saveMessageToDatabase = async (message) => {
         <Modal.Title className='massage-upload-title'>{strings.capture_video_with_message}</Modal.Title>
       </Modal.Header>
       <Modal.Body className='message-upload-modal'>
-        <AudioRecorder fetchMessages={fetchMessages} />
+        <AudioRecorder fetchMessages={fetchMessages} isThinking={isThinking} setIsThinking={setIsThinking} setSpeechIndicator={setSpeechIndicator} sendSpeechStatus={sendSpeechStatus} />
       </Modal.Body>
       <Modal.Footer className='message-upload-modal'>
         <Button variant="secondary" onClick={handleRecordAudioCloseModal}>

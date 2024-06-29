@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\Message;
 use App\Events\UserTyping;
 use App\Events\AiThinking;
+use App\Events\UserSpeech;
 use App\Models\Message as MessageModel;
 use Illuminate\Http\Request;
 use App\Models\User;
@@ -98,6 +99,16 @@ class ChatController extends Controller
         broadcast(new UserTyping($username, $isTyping))->toOthers();
     
         return response()->json(['status' => 'success']);
+    }
+
+    public function speech(Request $request)
+    {
+        $username = $request->username;
+        $isSpeech = $request->isSpeech;
+    
+        broadcast(new UserSpeech($username, $isSpeech))->toOthers();
+    
+        return response()->json(['status' => 'success', 'message' => $isSpeech]);
     }
     
     public function uploadMessage(Request $request)

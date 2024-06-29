@@ -76,6 +76,7 @@ Route::group(['prefix' => 'chat', 'middleware' => 'CORS'], function ($router) {
 	Route::get('/messages', [ChatController::class, 'getMessages']);
 	Route::post('/typing', [ChatController::class, 'userTyping']);
 	Route::post('/thinking', [ChatController::class, 'thinking']);
+	Route::post('/speech', [ChatController::class, 'speech']);
 	Route::post('/upload', [ChatController::class, 'uploadMessage']);
 	Route::post('/capture-upload', [ChatController::class, 'captureUpload']);
 	Route::post('/upload-video', [ChatController::class, 'uploadVideo']);
@@ -90,6 +91,7 @@ Route::group(['prefix' => 'guest', 'middleware' => 'CORS'], function ($router) {
 	Route::get('/messages', [GuestController::class, 'getMessages']);
 	Route::post('/typing', [GuestController::class, 'userTyping']);
 	Route::post('/thinking', [GuestController::class, 'thinking']);
+	Route::post('/speech', [GuestController::class, 'speech']);
 	Route::post('/generate-response', [GuestController::class, 'generateResponse']);
 	Route::post('/save-message', [GuestController::class, 'saveMessageToDatabase']);
 	Route::post('/tts', [GuestController::class, 'synthesize']);

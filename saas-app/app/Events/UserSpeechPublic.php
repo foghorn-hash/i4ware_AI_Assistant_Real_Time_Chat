@@ -8,17 +8,17 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 
-class UserTypingPublic implements ShouldBroadcastNow
+class UserSpeechPublic implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $username;
-    public $isTyping;
+    public $isSpeech;
 
-    public function __construct($username, $isTyping)
+    public function __construct($username, $isSpeech)
     {
         $this->username = $username;
-        $this->isTyping = $isTyping;
+        $this->isSpeech= $isSpeech;
     }
 
     public function broadcastOn()
@@ -28,7 +28,7 @@ class UserTypingPublic implements ShouldBroadcastNow
 
     public function broadcastAs()
     {
-        return 'user-typing';
+        return 'user-speech';
     }
 }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\MessagePublic;
 use App\Events\UserTypingPublic;
 use App\Events\AiThinkingPublic;
+use App\Events\UserSpeechPublic;
 use App\Models\Message as MessageModel;
 use Illuminate\Http\Request;
 use App\Models\User;
@@ -26,7 +27,7 @@ class GuestController extends Controller
     public function __construct(OpenAIService $openaiService, MarkdownService $markdownService)
     {
         //$this->apiToken = uniqid(base64_encode(Str::random(40)));
-        $this->middleware('auth:api', ["except" => ["message", "getMessages", "userTyping", "generateResponse", "saveMessageToDatabase", "thinking", "synthesize", "transcribe"]]);
+        $this->middleware('auth:api', ["except" => ["message", "getMessages", "userTyping", "speech", "generateResponse", "saveMessageToDatabase", "thinking", "synthesize", "transcribe"]]);
         $this->user = new User;
         $this->openaiService = $openaiService;
         $this->markdownService = $markdownService;
@@ -92,6 +93,16 @@ class GuestController extends Controller
         broadcast(new UserTypingPublic($username, $isTyping))->toOthers();
     
         return response()->json(['status' => 'success']);
+    }
+
+    public function speech(Request $request)
+    {
+        $username = 'Guest';
+        $isSpeech = $request->isSpeech;
+    
+        broadcast(new UserSpeechPublic($username, $isSpeech))->toOthers();
+    
+        return response()->json(['status' => 'success', 'message' => $isSpeech]);
     }
 
     public function generateResponse(Request $request)

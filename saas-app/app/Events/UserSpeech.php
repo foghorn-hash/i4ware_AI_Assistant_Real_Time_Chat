@@ -7,28 +7,30 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
+use Auth;
 
-class UserTypingPublic implements ShouldBroadcastNow
+class UserSpeech implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $username;
-    public $isTyping;
+    public $isSpeech;
 
-    public function __construct($username, $isTyping)
+    public function __construct($username, $isSpeech)
     {
         $this->username = $username;
-        $this->isTyping = $isTyping;
+        $this->isSpeech= $isSpeech;
     }
 
     public function broadcastOn()
     {
-        return new Channel(env('APP_DOMAIN_ADMIN') . '_chat');
+        $user = Auth::user();
+        return new Channel($user->domain . '_chat');
     }
 
     public function broadcastAs()
     {
-        return 'user-typing';
+        return 'user-speech';
     }
 }
 
