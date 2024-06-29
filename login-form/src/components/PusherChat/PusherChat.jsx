@@ -208,7 +208,8 @@ const PusherChat = () => {
     const channel = pusher.subscribe(authArray.domain + '_chat');
 
     channel.bind('message', (newMessage) => {
-        setMessages((prevMessages) => [newMessage, ...prevMessages]);
+        //setMessages((prevMessages) => [newMessage, ...prevMessages]);
+        fetchMessages();
     });
 
     channel.bind('user-typing', ({ username: typingUsername, isTyping }) => {
@@ -441,10 +442,13 @@ const generateResponse = async () => {
     await saveMessageToDatabase(aiResponseMessage);
 
     // Update the messages state
-    setMessages((prevMessages) => [aiResponseMessage, ...prevMessages]);
+    //setMessages((prevMessages) => [aiResponseMessage, ...prevMessages]);
 
     // Handle AI response (display in chat, etc.)
     setIsThinking(false);
+    await Axios.post(`${API_BASE_URL}/api/chat/thinking`, { username: "AI", isThinking: false }, {
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
+    });
 
     // Fetch updated messages
     fetchMessages();
