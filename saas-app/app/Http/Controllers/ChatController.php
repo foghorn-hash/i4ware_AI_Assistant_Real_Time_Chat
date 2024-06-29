@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Auth;
 use Storage;
-use App\Services\OpenAiService;
+use App\Services\OpenAIService;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Str;
@@ -23,7 +23,7 @@ class ChatController extends Controller
     protected $openAiService;
     protected $markdownService;
 
-    public function __construct(OpenAiService $openAiService)
+    public function __construct(OpenAIService $openAiService)
     {
         //$this->apiToken = uniqid(base64_encode(Str::random(40)));
         $this->middleware('auth:api');
