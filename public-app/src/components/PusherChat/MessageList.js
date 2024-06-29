@@ -83,7 +83,15 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
     scrollToBottom();
   }, [messages]);
 
-  const handleGenerateSpeech = async (text, gender, messageId) => {
+  const handleToggleSpeech = async (text, gender, messageId) => {
+    if (isSpeaking) {
+      stopSpeech();
+    } else {
+      generateSpeech(text, gender, messageId);
+    }
+  };
+
+  const generateSpeech = async (text, gender, messageId) => {
     if (isSpeaking) {
       stopSpeech();
     }
@@ -129,8 +137,9 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
           <div className='message-date'>
             <strong>{msg.username}: </strong>
             <i>{msg.formatted_created_at}</i>
-            <button className="message-TTS" onClick={() => handleGenerateSpeech(msg.message, msg.gender, msg.id)}>{strings.generateSpeech}</button>
-            <button className="message-TTS" onClick={stopSpeech}>{strings.stopSpeech}</button>
+            <button className="message-TTS" onClick={() => handleToggleSpeech(msg.message, msg.gender, msg.id)}>
+              {isSpeaking ? strings.stopSpeech : strings.generateSpeech}
+            </button>
           </div>
           <div className='massage-container'>
             <img src={msg.profilePicUrl || msg.defaultImg} className='message-avatar' alt={`Profile of ${msg.username}`} />
