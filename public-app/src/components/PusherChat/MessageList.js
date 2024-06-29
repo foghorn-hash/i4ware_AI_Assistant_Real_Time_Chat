@@ -8,7 +8,7 @@ import LocalizedStrings from 'react-localization';
 let strings = new LocalizedStrings({
   en: {
     your_browser_not_support_video_tag: "Your browser does not support the video tag.",
-    generateSpeech: "Generate Speech",
+    generateSpeech: "Play Speech",
     stopSpeech: "Stop Speech"
   },
   fi: {
@@ -18,7 +18,7 @@ let strings = new LocalizedStrings({
   },
   se: {
     your_browser_not_support_video_tag: "Din webbläsare stöder inte videomarkeringen.",
-    generateSpeech: "Generera tal",
+    generateSpeech: "Spela Tal",
     stopSpeech: "Stoppa tal"
   }
 });
