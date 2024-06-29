@@ -64,6 +64,8 @@ const AudioRecorder = (props) => {
   const handleChatGPTResponse = (responseText) => {
     console.log('Received response from ChatGPT:', responseText);
     if (isAiEnabled) {
+        props.sendSpeechStatus(false);
+        props.setSpeechIndicator('');
         // Handle AI response (display in chat, etc.)
         props.setIsThinking(true);
         Axios.post(`${API_BASE_URL}/api/chat/thinking`, { username: "AI", isThinking: true }, {

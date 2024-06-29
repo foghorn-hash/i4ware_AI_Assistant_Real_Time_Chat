@@ -6,20 +6,28 @@ import HighlightedResponse from './HighlightedResponse';
 import LocalizedStrings from 'react-localization';
 
 let strings = new LocalizedStrings({
-    en: {
-      your_browser_not_support_video_tag: "Your browser does not support the video tag.",
-    },
-    fi: {
-      your_browser_not_support_video_tag: "Selaimesi ei tue video tagia.",
-    },
-    se: {
-      your_browser_not_support_video_tag: "Din webbläsare stöder inte videomarkeringen.",
-    }
-  });
+  en: {
+    your_browser_not_support_video_tag: "Your browser does not support the video tag.",
+    generateSpeech: "Generate Speech",
+    stopSpeech: "Stop Speech"
+  },
+  fi: {
+    your_browser_not_support_video_tag: "Selaimesi ei tue video tagia.",
+    generateSpeech: "Luo puhe",
+    stopSpeech: "Pysäytä puhe"
+  },
+  se: {
+    your_browser_not_support_video_tag: "Din webbläsare stöder inte videomarkeringen.",
+    generateSpeech: "Generera tal",
+    stopSpeech: "Stoppa tal"
+  }
+});
 
 const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
   const parser = new Parser(); // Create the HTML parser instance
   const messagesEndRef = useRef(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [audio, setAudio] = useState(null);
 
   var query = window.location.search.substring(1);
   var urlParams = new URLSearchParams(query);
@@ -76,14 +84,20 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
   }, [messages]);
 
   const handleGenerateSpeech = async (text, gender, messageId) => {
-    let voice;
+    if (isSpeaking) {
+      stopSpeech();
+    }
 
-    if (gender === 'male') {
-      voice = 'onyx';
-    } else if (gender === 'female') {
-      voice = 'shimmer';
-    } else {
-      voice = 'nova'; // Default voice if gender is not specified
+    let voice;
+    switch (gender) {
+      case 'male':
+        voice = 'onyx';
+        break;
+      case 'female':
+        voice = 'shimmer';
+        break;
+      default:
+        voice = 'nova';
     }
 
     try {
@@ -91,10 +105,22 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
       });
       const audioUrl = response.data.url;
-      const audio = new Audio(API_BASE_URL + audioUrl);
-      audio.play();
+      const newAudio = new Audio(API_BASE_URL + audioUrl);
+      newAudio.play();
+      setAudio(newAudio);
     } catch (error) {
       console.error('Error generating speech:', error);
+    }
+
+    setIsSpeaking(true);
+  };
+
+  const stopSpeech = () => {
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+      setAudio(null);
+      setIsSpeaking(false);
     }
   };
 
@@ -105,7 +131,8 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
           <div className='message-date'>
             <strong>{msg.username}: </strong>
             <i>{msg.formatted_created_at}</i>
-            <button className="message-TTS" onClick={() => handleGenerateSpeech(msg.message, msg.gender, msg.id)}>Generate Speech</button>
+            <button className="message-TTS" onClick={() => handleGenerateSpeech(msg.message, msg.gender, msg.id)}>{strings.generateSpeech}</button>
+            <button className="message-TTS" onClick={stopSpeech}>{strings.stopSpeech}</button>
           </div>
           <div className='massage-container'>
             <img src={msg.profilePicUrl || msg.defaultImg} className='message-avatar' alt={`Profile of ${msg.username}`} />

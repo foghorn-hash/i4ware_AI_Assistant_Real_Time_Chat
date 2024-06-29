@@ -229,7 +229,9 @@ const PusherChat = () => {
 
     channel.bind('user-speech', ({ username: speechUsername, isSpeech }) => {
       if (isSpeech) {
-          setSpeechIndicator(`${speechUsername} ${strings.speech}`);
+        setSpeechIndicator(`${speechUsername} ${strings.speech}`);
+      } else {
+        setSpeechIndicator('');
       }
     });
 
