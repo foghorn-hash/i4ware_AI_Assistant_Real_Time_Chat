@@ -6,7 +6,6 @@ import DefaultMaleImage from "../../male-default-profile-picture.png";
 import DefaultFemaleImage from "../../female-default-profile-picture.png";
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
-import Webcam from 'react-webcam';
 import Swal from 'sweetalert2';
 import hljs from 'highlight.js/lib/core';
 import 'highlight.js/styles/default.css';
@@ -160,7 +159,9 @@ const PusherChat = () => {
 
     channel.bind('user-speech', ({ username: speechUsername, isSpeech }) => {
       if (isSpeech) {
-          setSpeechIndicator(`${speechUsername} ${strings.speech}`);
+        setSpeechIndicator(`${speechUsername} ${strings.speech}`);
+      } else {
+        setSpeechIndicator('');
       }
     });
 

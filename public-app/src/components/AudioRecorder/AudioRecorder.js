@@ -11,11 +11,11 @@ import LocalizedStrings from 'react-localization';
 let strings = new LocalizedStrings({
   en: { 
     ask_from_ai: "Ask from AI",
-    waveform: "Wavefrom",
+    waveform: "Waveform",
     volume: "Volume Level Meter",
     male: "Male",
     female: "Female",
-   },
+  },
   fi: { 
     ask_from_ai: "Kysy tekoälyltä",
     waveform: "Ääniraita",
@@ -64,7 +64,8 @@ const AudioRecorder = (props) => {
   const handleChatGPTResponse = (responseText) => {
     console.log('Received response from ChatGPT:', responseText);
     if (isAiEnabled) {
-      // Handle AI response (display in chat, etc.)
+      props.sendSpeechStatus(false);
+      props.setSpeechIndicator('');
       props.setIsThinking(true);
       Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
       generateResponse(responseText);
@@ -123,8 +124,8 @@ const AudioRecorder = (props) => {
       );
       console.log(response.data.response);
 
-      const messgeForHighliht = response.data.response;
-      const highlightedHTML = hljs.highlightAuto(messgeForHighliht).value;
+      const messageForHighlight = response.data.response;
+      const highlightedHTML = hljs.highlightAuto(messageForHighlight).value;
 
       const aiResponseMessage = {
         username: 'AI',
@@ -135,10 +136,8 @@ const AudioRecorder = (props) => {
       };
 
       await saveMessageToDatabase(aiResponseMessage);
-
-      // Handle AI response (display in chat, etc.)
       props.setIsThinking(false);
-      await Axios.post(`${API_BASE_URL}/api/chat/thinking`, { username: "AI", isThinking: false });
+      await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
 
       props.fetchMessages();
     } catch (error) {
@@ -165,7 +164,7 @@ const AudioRecorder = (props) => {
 
       const formData = new FormData();
       formData.append('audio', blob, 'recording.mp3');
-      formData.append('gender', gender); // Append gender to the form data
+      formData.append('gender', gender);
 
       Axios.post(`${API_BASE_URL}/api/guest/stt`, formData).then(response => {
         console.log('Transcription result:', response.data.transcription);
