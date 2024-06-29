@@ -70,10 +70,10 @@ function App() {
     <div className="App">
       <header className='App-header'>
         <img src={logo} className='App-logo' alt="i4ware Software" />
-        <select id="language-selector" className="language-selector" onChange={handleLocalization}>
-          <option value="fi" selected={language === 'fi'}>Finnish</option>
-          <option value="en" selected={language === 'en'}>English</option>
-          <option value="se" selected={language === 'se'}>Swedish</option>
+        <select id="language-selector" value={language} className="language-selector" onChange={handleLocalization}>
+          <option value="fi">Finnish</option>
+          <option value="en">English</option>
+          <option value="se">Swedish</option>
         </select>
       </header>
       <main className='App-main'>

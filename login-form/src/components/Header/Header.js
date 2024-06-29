@@ -147,10 +147,10 @@ function Header(props) {
   
     return (
       <div className="ml-auto" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'row' }}>
-        <select id="language-selector" className="language-selector" onChange={handleLocalization}>
-          <option value="fi" selected={language === 'fi'}>Finnish</option>
-          <option value="en" selected={language === 'en'}>English</option>
-          <option value="se" selected={language === 'se'}>Swedish</option>
+        <select id="language-selector" value={language} className="language-selector" onChange={handleLocalization}>
+          <option value="fi">Finnish</option>
+          <option value="en">English</option>
+          <option value="se">Swedish</option>
         </select>
   
         {authState.isLogged ? (

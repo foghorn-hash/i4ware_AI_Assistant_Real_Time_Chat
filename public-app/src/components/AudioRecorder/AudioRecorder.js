@@ -5,6 +5,7 @@ import Axios from 'axios';
 import hljs from 'highlight.js/lib/core';
 import 'highlight.js/styles/default.css';
 import WaveSurfer from 'wavesurfer.js';
+import { Circle, Mic, StopCircle } from 'react-bootstrap-icons';
 import { API_BASE_URL, API_DEFAULT_LANGUAGE } from "../../constants/apiConstants";
 import LocalizedStrings from 'react-localization';
 
@@ -221,7 +222,7 @@ const AudioRecorder = (props) => {
       <progress ref={meterRef} max="255" value="0" className='audio-meter' />
       <div className='audio-recorder-clear' />
       <button className='audio-recorder-button' onClick={isRecording ? stopRecording : startRecording}>
-        {isRecording ? 'Stop Recording' : 'Start Recording'}
+        {isRecording ? <Circle /> : <Mic />}
       </button>
       <div className='audio-recorder-clear' />
       {strings.ask_from_ai}

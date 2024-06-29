@@ -11,6 +11,7 @@ import hljs from 'highlight.js/lib/core';
 import 'highlight.js/styles/default.css';
 import MessageList from './MessageList';
 import AudioRecorder from '../AudioRecorder/AudioRecorder';
+import { Mic } from 'react-bootstrap-icons';
 import { API_BASE_URL, API_DOMAIN, API_DEFAULT_LANGUAGE, API_PUSHER_KEY, API_PUSHER_CLUSTER } from "../../constants/apiConstants";
 import LocalizedStrings from 'react-localization';
 
@@ -273,7 +274,7 @@ const saveMessageToDatabase = async (message) => {
     <>
     <div className="chat-container">
       <Button variant="primary" className='message-record-audio-button' onClick={handleRecordAudioShowModal}>
-        {strings.record_audio}
+        <Mic />
       </Button>
       <MessageList messages={messages} DefaultMaleImage={DefaultMaleImage} DefaultFemaleImage={DefaultFemaleImage} />
       {typingIndicator && <div className="typing-indicator">{typingIndicator}</div>}
