@@ -236,6 +236,7 @@ const generateResponse = async () => {
 
     // Handle AI response (display in chat, etc.)
     setIsThinking(false);
+    await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
 
     // Fetch updated messages
     fetchMessages();
