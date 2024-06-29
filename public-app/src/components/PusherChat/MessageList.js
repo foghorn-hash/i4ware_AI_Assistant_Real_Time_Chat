@@ -3,12 +3,13 @@ import { Parser } from 'html-to-react'; // Assuming you're using this library
 import { API_BASE_URL, API_DEFAULT_LANGUAGE } from "../../constants/apiConstants";
 import Axios from 'axios';
 import HighlightedResponse from './HighlightedResponse';
+import { PlayFill, StopFill } from 'react-bootstrap-icons';
 import LocalizedStrings from 'react-localization';
 
 let strings = new LocalizedStrings({
   en: {
     your_browser_not_support_video_tag: "Your browser does not support the video tag.",
-    generateSpeech: "Play Speech",
+    generateSpeech: "Generate Speech",
     stopSpeech: "Stop Speech"
   },
   fi: {
@@ -19,15 +20,15 @@ let strings = new LocalizedStrings({
   se: {
     your_browser_not_support_video_tag: "Din webbläsare stöder inte videomarkeringen.",
     generateSpeech: "Spela Tal",
-    stopSpeech: "Stoppa tal"
+    stopSpeech: "Stoppa Tal"
   }
 });
 
 const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
   const parser = new Parser(); // Create the HTML parser instance
   const messagesEndRef = useRef(null);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [audio, setAudio] = useState(null);
+  const [currentMessageId, setCurrentMessageId] = useState(null);
+  const [currentAudio, setCurrentAudio] = useState(null);
 
   var query = window.location.search.substring(1);
   var urlParams = new URLSearchParams(query);
@@ -84,16 +85,19 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
   }, [messages]);
 
   const handleToggleSpeech = async (text, gender, messageId) => {
-    if (isSpeaking) {
-      stopSpeech();
-    } else {
-      generateSpeech(text, gender, messageId);
+    if (currentMessageId === messageId) {
+      if (currentAudio) {
+        currentAudio.pause();
+        setCurrentMessageId(null);
+        setCurrentAudio(null);
+      }
+      return;
     }
-  };
 
-  const generateSpeech = async (text, gender, messageId) => {
-    if (isSpeaking) {
-      stopSpeech();
+    if (currentAudio) {
+      currentAudio.pause();
+      setCurrentMessageId(null);
+      setCurrentAudio(null);
     }
 
     let voice;
@@ -111,22 +115,17 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
     try {
       const response = await Axios.post(API_BASE_URL + '/api/guest/tts', { text, voice, message_id: messageId });
       const audioUrl = response.data.url;
-      const newAudio = new Audio(API_BASE_URL + audioUrl);
-      newAudio.play();
-      setAudio(newAudio);
+      const audio = new Audio(API_BASE_URL + audioUrl);
+      audio.play();
+      setCurrentAudio(audio);
+      setCurrentMessageId(messageId);
+
+      audio.onended = () => {
+        setCurrentMessageId(null);
+        setCurrentAudio(null);
+      };
     } catch (error) {
       console.error('Error generating speech:', error);
-    }
-
-    setIsSpeaking(true);
-  };
-
-  const stopSpeech = () => {
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
-      setAudio(null);
-      setIsSpeaking(false);
     }
   };
 
@@ -138,7 +137,7 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
             <strong>{msg.username}: </strong>
             <i>{msg.formatted_created_at}</i>
             <button className="message-TTS" onClick={() => handleToggleSpeech(msg.message, msg.gender, msg.id)}>
-              {isSpeaking ? strings.stopSpeech : strings.generateSpeech}
+              {currentMessageId === msg.id ? <StopFill /> : <PlayFill />}
             </button>
           </div>
           <div className='massage-container'>
