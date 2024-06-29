@@ -29,6 +29,7 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
   const messagesEndRef = useRef(null);
   const [currentMessageId, setCurrentMessageId] = useState(null);
   const [currentAudio, setCurrentAudio] = useState(null);
+  const [currentAudioUrl, setCurrentAudioUrl] = useState(null);
 
   var query = window.location.search.substring(1);
   var urlParams = new URLSearchParams(query);
@@ -84,6 +85,14 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    return () => {
+      if (currentAudioUrl) {
+        URL.revokeObjectURL(currentAudioUrl);
+      }
+    };
+  }, [currentAudioUrl]);
+
   const handleToggleSpeech = async (text, gender, messageId) => {
     if (currentMessageId === messageId) {
       if (currentAudio) {
@@ -93,13 +102,17 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
       }
       return;
     }
-
+  
     if (currentAudio) {
       currentAudio.pause();
       setCurrentMessageId(null);
       setCurrentAudio(null);
+      if (currentAudioUrl) {
+        URL.revokeObjectURL(currentAudioUrl);
+        setCurrentAudioUrl(null);
+      }
     }
-
+  
     let voice;
     switch (gender) {
       case 'male':
@@ -111,23 +124,32 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
       default:
         voice = 'nova';
     }
-
+  
     try {
-      const response = await Axios.post(API_BASE_URL + '/api/guest/tts', { text, voice, message_id: messageId });
-      const audioUrl = response.data.url;
-      const audio = new Audio(API_BASE_URL + audioUrl);
+      const response = await Axios.post(API_BASE_URL + '/api/guest/tts', { text, voice, message_id: messageId }, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+  
+      if (response.status !== 200) {
+        throw new Error('Failed to fetch audio data');
+      }
+  
+      const audioUrl = API_BASE_URL + '/' + response.data.url;
+      const audio = new Audio(audioUrl);
       audio.play();
       setCurrentAudio(audio);
       setCurrentMessageId(messageId);
-
+      setCurrentAudioUrl(audioUrl);
+  
       audio.onended = () => {
         setCurrentMessageId(null);
         setCurrentAudio(null);
+        setCurrentAudioUrl(null);
       };
     } catch (error) {
       console.error('Error generating speech:', error);
     }
-  };
+  };  
 
   return (
     <div className="messages-list">

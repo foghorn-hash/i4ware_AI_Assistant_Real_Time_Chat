@@ -208,8 +208,10 @@ class GuestController extends Controller
             }
         }
 
+        // Synthesize the speech
         $audioContent = $this->openaiService->synthesizeSpeech($text, $voice);
 
+        // Generate a unique filename
         $fileName = 'audio/' . uniqid() . '.mp3';
         Storage::disk('public')->put($fileName, $audioContent);
 
@@ -219,6 +221,7 @@ class GuestController extends Controller
             $message->save();
         }
 
+        // Return the audio file URL
         return response()->json(['url' => Storage::url($fileName)]);
     }
 
