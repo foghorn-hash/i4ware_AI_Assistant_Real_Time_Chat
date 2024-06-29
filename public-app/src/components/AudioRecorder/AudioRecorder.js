@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import './AudioRecorder.css';
 import RecordRTC from 'recordrtc';
 import Axios from 'axios';
-import hljs from 'highlight.js/lib/core';
-import 'highlight.js/styles/default.css';
 import WaveSurfer from 'wavesurfer.js';
 import { Circle, Mic, StopCircle } from 'react-bootstrap-icons';
 import { API_BASE_URL, API_DEFAULT_LANGUAGE } from "../../constants/apiConstants";
@@ -126,12 +124,11 @@ const AudioRecorder = (props) => {
       console.log(response.data.response);
 
       const messageForHighlight = response.data.response;
-      const highlightedHTML = hljs.highlightAuto(messageForHighlight).value;
+      const highlightedHTML = messageForHighlight;
 
       const aiResponseMessage = {
         username: 'AI',
         message: highlightedHTML,
-        messagePlain: response.data.response,
         gender: gender,
         created_at: new Date().toISOString(),
       };

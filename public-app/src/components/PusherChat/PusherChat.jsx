@@ -7,8 +7,6 @@ import DefaultFemaleImage from "../../female-default-profile-picture.png";
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 import Swal from 'sweetalert2';
-import hljs from 'highlight.js/lib/core';
-import 'highlight.js/styles/default.css';
 import MessageList from './MessageList';
 import AudioRecorder from '../AudioRecorder/AudioRecorder';
 import { Mic } from 'react-bootstrap-icons';
@@ -234,13 +232,12 @@ const generateResponse = async () => {
 
     const messgeForHighliht = response.data.response;
 
-    const highlightedHTML = hljs.highlightAuto(messgeForHighliht).value;
+    const highlightedHTML = messgeForHighliht;
 
     // Create the AI response message object with highlighted message
     const aiResponseMessage = {
       username: 'AI',
       message: highlightedHTML, // Use the highlighted response
-      messagePlain: response.data.response,
       created_at: new Date().toISOString(),
     };
 

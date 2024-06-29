@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Parser } from 'html-to-react'; // Assuming you're using this library
 import { API_BASE_URL, ACCESS_TOKEN_NAME, API_DEFAULT_LANGUAGE } from "../../constants/apiConstants";
 import Axios from 'axios';
 import HighlightedResponse from './HighlightedResponse';
@@ -24,7 +23,6 @@ let strings = new LocalizedStrings({
 });
 
 const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
-  const parser = new Parser(); // Create the HTML parser instance
   const messagesEndRef = useRef(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audio, setAudio] = useState(null);
@@ -48,7 +46,6 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
 
   return {
     ...msg,
-    parsedMessage: parser.parse(msg.message), // Parse HTML content here
     profilePicUrl,
     defaultImg
   }; })
@@ -137,7 +134,7 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
           <div className='massage-container'>
             <img src={msg.profilePicUrl || msg.defaultImg} className='message-avatar' alt={`Profile of ${msg.username}`} />
             <span>
-              {msg.parsedMessage}
+              <HighlightedResponse markdown={msg.message} />
             </span>
             {/* Render image if image_path is not null */}
             {renderMessageImageOrVideo(msg)}

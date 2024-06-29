@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import './AudioRecorder.css';
 import RecordRTC, { invokeSaveAsDialog } from 'recordrtc';
 import Axios from 'axios';
-import hljs from 'highlight.js/lib/core';
-import 'highlight.js/styles/default.css'
 import WaveSurfer from 'wavesurfer.js';
 import { API_BASE_URL, ACCESS_USER_DATA, ACCESS_TOKEN_NAME, API_DEFAULT_LANGUAGE } from "../../constants/apiConstants"; // Assuming you have ACCESS_TOKEN_NAME defined
 import LocalizedStrings from 'react-localization';
@@ -137,13 +135,13 @@ const AudioRecorder = (props) => {
   
       const messgeForHighliht = response.data.response;
   
-      const highlightedHTML = hljs.highlightAuto(messgeForHighliht).value;
+      const highlightedHTML = messgeForHighliht;
   
       // Create the AI response message object with highlighted message
       const aiResponseMessage = {
         username: 'AI',
         message: highlightedHTML, // Use the highlighted response
-        messagePlain: response.data.response,
+        gender: gender,
         created_at: new Date().toISOString(),
       };
   
