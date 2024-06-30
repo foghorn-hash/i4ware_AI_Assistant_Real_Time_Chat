@@ -10,6 +10,7 @@ import Webcam from 'react-webcam';
 import Swal from 'sweetalert2';
 import MessageList from './MessageList';
 import AudioRecorder from '../AudioRecorder/AudioRecorder';
+import { Mic } from 'react-bootstrap-icons';
 import { API_BASE_URL, ACCESS_TOKEN_NAME, ACCESS_USER_DATA, API_DEFAULT_LANGUAGE, API_PUSHER_KEY, API_PUSHER_CLUSTER } from "../../constants/apiConstants";
 import LocalizedStrings from 'react-localization';
 
@@ -501,7 +502,7 @@ const saveMessageToDatabase = async (message) => {
         {strings.capture_video_with_message}
       </Button>
       <Button variant="primary" className='message-record-audio-button' onClick={handleRecordAudioShowModal}>
-        {strings.record_audio}
+        <Mic />
       </Button>
       <MessageList messages={messages} DefaultMaleImage={DefaultMaleImage} DefaultFemaleImage={DefaultFemaleImage} />
       {typingIndicator && <div className="typing-indicator">{typingIndicator}</div>}
