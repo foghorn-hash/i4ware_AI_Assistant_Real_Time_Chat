@@ -246,7 +246,7 @@ class ChatController extends Controller
         $message->save();
 
         // Trigger an event for the new message
-        event(new Message($user->name, $promptPlain));
+        event(new Message($user->name, $prompt));
 
         return response()->json(['success' => 'Message saved successfully'], 200);
     }

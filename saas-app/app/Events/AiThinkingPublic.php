@@ -24,7 +24,6 @@ class AiThinkingPublic implements ShouldBroadcastNow
 
     public function broadcastOn()
     {
-        $user = Auth::user();
         return new Channel(env('APP_DOMAIN_ADMIN') . '_chat');
     }
 

@@ -303,10 +303,10 @@ const PusherChat = () => {
       await Axios.post(`${API_BASE_URL}/api/chat/thinking`, { username: "AI", isThinking: true }, {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
       });
-
       generateResponse(); // Call generateResponse if isAiEnabled is true
+    } else {
+      fetchMessages(); // Fetch messages after sending a new message
     }
-    fetchMessages(); // Fetch messages after sending a new message
   };
 
   const handleAiCheckboxChange = (e) => {

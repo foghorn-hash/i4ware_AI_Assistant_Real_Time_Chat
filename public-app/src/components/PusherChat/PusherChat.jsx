@@ -142,7 +142,6 @@ const PusherChat = () => {
     const channel = pusher.subscribe(API_DOMAIN + '_chat');
 
     channel.bind('message', (newMessage) => {
-        //setMessages((prevMessages) => [newMessage, ...prevMessages]);
         fetchMessages();
     });
 
@@ -204,68 +203,52 @@ const PusherChat = () => {
 
   const submitMessage = async (e) => {
     e.preventDefault();
-    await Axios.post(`${API_BASE_URL}/api/guest/messages`, { username, message });
-    setMessage('');
-    sendTypingStatus(false);
-    if (isAiEnabled) {
-      // Send "AI is thinking" message
-      setIsThinking(true);
-      await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
-
-      generateResponse(); // Call generateResponse if isAiEnabled is true
+    try {
+      await Axios.post(`${API_BASE_URL}/api/guest/messages`, { username, message });
+      setMessage('');
+      sendTypingStatus(false);
+      if (isAiEnabled) {
+        setIsThinking(true);
+        await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
+        await generateResponse();
+      } else {
+        fetchMessages(); // Fetch messages after sending user message
+      }
+    } catch (error) {
+      console.error('Failed to send message', error);
     }
-    fetchMessages(); // Fetch messages after sending a new message
   };
 
   const handleAiCheckboxChange = (e) => {
     setIsAiEnabled(e.target.checked);
   };
 
-const generateResponse = async () => {
-  try {
-    const response = await Axios.post(
-      `${API_BASE_URL}/api/guest/generate-response`,
-      { prompt: message }
-    );
+  const generateResponse = async () => {
+    try {
+      const response = await Axios.post(`${API_BASE_URL}/api/guest/generate-response`, { prompt: message });
+      const highlightedHTML = response.data.response;
+      const aiResponseMessage = {
+        username: 'AI',
+        message: highlightedHTML,
+        created_at: new Date().toISOString(),
+      };
+      await saveMessageToDatabase(aiResponseMessage);
+      setIsThinking(false);
+      await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
+      fetchMessages(); // Fetch messages after generating AI response
+    } catch (error) {
+      console.error('Error:', error);
+      setIsThinking(false);
+    }
+  };
 
-    console.log(response.data.response);
-
-    const messgeForHighliht = response.data.response;
-
-    const highlightedHTML = messgeForHighliht;
-
-    // Create the AI response message object with highlighted message
-    const aiResponseMessage = {
-      username: 'AI',
-      message: highlightedHTML, // Use the highlighted response
-      created_at: new Date().toISOString(),
-    };
-
-    // Save the AI response message to the database
-    await saveMessageToDatabase(aiResponseMessage);
-
-    // Update the messages state
-    //setMessages((prevMessages) => [aiResponseMessage, ...prevMessages]);
-
-    // Handle AI response (display in chat, etc.)
-    setIsThinking(false);
-    await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
-
-    // Fetch updated messages
-    fetchMessages();
-  } catch (error) {
-    console.error('Error:', error);
-  }
-};
-
-const saveMessageToDatabase = async (message) => {
-  try {
-    await Axios.post(`${API_BASE_URL}/api/guest/save-message`, message);
-    console.log('Message saved to database successfully:', message);
-  } catch (error) {
-    console.error('Error saving message to database:', error);
-  }
-};
+  const saveMessageToDatabase = async (message) => {
+    try {
+      await Axios.post(`${API_BASE_URL}/api/guest/save-message`, message);
+    } catch (error) {
+      console.error('Error saving message to database:', error);
+    }
+  };
 
   return (
     <>

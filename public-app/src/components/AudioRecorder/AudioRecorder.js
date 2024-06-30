@@ -3,7 +3,7 @@ import './AudioRecorder.css';
 import RecordRTC from 'recordrtc';
 import Axios from 'axios';
 import WaveSurfer from 'wavesurfer.js';
-import { Circle, Mic, StopCircle } from 'react-bootstrap-icons';
+import { Circle, Mic } from 'react-bootstrap-icons';
 import { API_BASE_URL, API_DEFAULT_LANGUAGE } from "../../constants/apiConstants";
 import LocalizedStrings from 'react-localization';
 
@@ -31,11 +31,12 @@ let strings = new LocalizedStrings({
   }
 });
 
-const AudioRecorder = (props) => {
+const AudioRecorder = ({ fetchMessages, setSpeechIndicator, sendSpeechStatus, setIsThinking }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recorder, setRecorder] = useState(null);
   const [audioBlob, setAudioBlob] = useState(null);
   const [isAiEnabled, setIsAiEnabled] = useState(false);
+  const [gender, setGender] = useState('male');
   const audioRef = useRef(null);
   const waveformRef = useRef(null);
   const wavesurfer = useRef(null);
@@ -44,36 +45,45 @@ const AudioRecorder = (props) => {
   const analyserRef = useRef(null);
   const meterRef = useRef(null);
   const animationFrameIdRef = useRef(null);
-  const [gender, setGender] = useState('male');
 
-  var query = window.location.search.substring(1);
-  var urlParams = new URLSearchParams(query);
-  var localization = urlParams.get('lang');
+  const urlParams = new URLSearchParams(window.location.search.substring(1));
+  const localization = urlParams.get('lang') || API_DEFAULT_LANGUAGE;
+  strings.setLanguage(localization);
 
-  if (localization == null) {
-    strings.setLanguage(API_DEFAULT_LANGUAGE);
-  } else {
-    strings.setLanguage(localization);
-  }
+  useEffect(() => {
+    if (audioBlob && waveformRef.current) {
+      if (wavesurfer.current) {
+        wavesurfer.current.destroy();
+      }
+      wavesurfer.current = WaveSurfer.create({
+        container: waveformRef.current,
+        waveColor: '#ddd',
+        progressColor: '#ff5500',
+        responsive: true,
+      });
+      wavesurfer.current.load(URL.createObjectURL(audioBlob));
+    }
+  }, [audioBlob]);
 
   const handleAiCheckboxChange = (e) => {
     setIsAiEnabled(e.target.checked);
   };
 
-  const handleChatGPTResponse = (responseText) => {
+  const handleChatGPTResponse = async (responseText) => {
     console.log('Received response from ChatGPT:', responseText);
     if (isAiEnabled) {
-      props.sendSpeechStatus(false);
-      props.setSpeechIndicator('');
-      props.setIsThinking(true);
-      Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
-      generateResponse(responseText);
+      sendSpeechStatus(false);
+      setSpeechIndicator('');
+      setIsThinking(true);
+      await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
+      await generateResponse(responseText);
     }
-    props.fetchMessages();
+    fetchMessages();
   };
 
-  const startRecording = () => {
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const newRecorder = RecordRTC(stream, {
         type: 'audio',
         mimeType: 'audio/mp3',
@@ -83,10 +93,10 @@ const AudioRecorder = (props) => {
       setIsRecording(true);
       mediaStreamRef.current = stream;
       setupAudioLevelMeter(stream);
-      props.sendSpeechStatus(true);
-    }).catch(err => {
+      sendSpeechStatus(true);
+    } catch (err) {
       console.error('Error accessing microphone', err);
-    });
+    }
   };
 
   const setupAudioLevelMeter = (stream) => {
@@ -99,7 +109,6 @@ const AudioRecorder = (props) => {
     const dataArray = new Uint8Array(bufferLength);
 
     source.connect(analyser);
-
     audioContextRef.current = audioContext;
     analyserRef.current = analyser;
 
@@ -117,29 +126,19 @@ const AudioRecorder = (props) => {
 
   const generateResponse = async (message) => {
     try {
-      const response = await Axios.post(
-        `${API_BASE_URL}/api/guest/generate-response`,
-        { prompt: message }
-      );
-      console.log(response.data.response);
-
-      const messageForHighlight = response.data.response;
-      const highlightedHTML = messageForHighlight;
-
+      const response = await Axios.post(`${API_BASE_URL}/api/guest/generate-response`, { prompt: message });
       const aiResponseMessage = {
         username: 'AI',
-        message: highlightedHTML,
-        gender: gender,
+        message: response.data.response,
+        gender,
         created_at: new Date().toISOString(),
       };
-
       await saveMessageToDatabase(aiResponseMessage);
-      props.setIsThinking(false);
+      setIsThinking(false);
       await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
-
-      props.fetchMessages();
+      fetchMessages();
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error generating AI response:', error);
     }
   };
 
@@ -147,66 +146,36 @@ const AudioRecorder = (props) => {
     try {
       await Axios.post(`${API_BASE_URL}/api/guest/save-message`, message);
       console.log('Message saved to database successfully:', message);
-      props.fetchMessages();
+      fetchMessages();
     } catch (error) {
       console.error('Error saving message to database:', error);
     }
   };
 
   const stopRecording = () => {
-    recorder.stopRecording(() => {
+    recorder.stopRecording(async () => {
       const blob = recorder.getBlob();
-      const audioUrl = URL.createObjectURL(blob);
-      audioRef.current.src = audioUrl;
+      audioRef.current.src = URL.createObjectURL(blob);
       setAudioBlob(blob);
 
       const formData = new FormData();
       formData.append('audio', blob, 'recording.mp3');
       formData.append('gender', gender);
 
-      Axios.post(`${API_BASE_URL}/api/guest/stt`, formData).then(response => {
+      try {
+        const response = await Axios.post(`${API_BASE_URL}/api/guest/stt`, formData);
         console.log('Transcription result:', response.data.transcription);
-        handleChatGPTResponse(response.data.transcription);
-        props.sendSpeechStatus(false);
-        props.setSpeechIndicator('');
-        props.fetchMessages();
-      }).catch(error => {
+        await handleChatGPTResponse(response.data.transcription);
+      } catch (error) {
         console.error('Error uploading audio file:', error);
-      });
+      }
 
       setIsRecording(false);
-      if (animationFrameIdRef.current) {
-        cancelAnimationFrame(animationFrameIdRef.current);
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      }
+      cancelAnimationFrame(animationFrameIdRef.current);
+      audioContextRef.current.close();
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
     });
   };
-
-  const handleChange = (event) => {
-    setGender(event.target.value);
-  };
-
-  useEffect(() => {
-    if (audioBlob && waveformRef.current) {
-      if (wavesurfer.current) {
-        wavesurfer.current.destroy();
-      }
-      wavesurfer.current = WaveSurfer.create({
-        container: waveformRef.current,
-        waveColor: '#ddd',
-        progressColor: '#ff5500',
-        responsive: true,
-      });
-
-      const audioUrl = URL.createObjectURL(audioBlob);
-      wavesurfer.current.load(audioUrl);
-    }
-  }, [audioBlob]);
 
   return (
     <div>
@@ -231,7 +200,7 @@ const AudioRecorder = (props) => {
         onChange={handleAiCheckboxChange}
       />
       <div className='audio-recorder-clear' />
-      <select className='select-gender' id="gender" value={gender} onChange={handleChange}>
+      <select className='select-gender' id="gender" value={gender} onChange={(e) => setGender(e.target.value)}>
         <option value="male">{strings.male}</option>
         <option value="female">{strings.female}</option>
       </select>

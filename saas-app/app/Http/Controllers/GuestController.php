@@ -138,7 +138,7 @@ class GuestController extends Controller
         $message->save();
 
         // Trigger an event for the new message
-        event(new MessagePublic("AI", $promptPlain));
+        event(new MessagePublic("AI", $prompt));
 
         return response()->json(['success' => 'Message saved successfully'], 200);
     }
