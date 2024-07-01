@@ -15,4 +15,14 @@ class Message extends Model
      * @var array<int, string>
      */
     protected $fillable = ['username', 'message'];
+
+    public function domains()
+    {
+        return $this->belongsTo(Domain::class, 'domain', 'domain');
+    }
+
+    public function users()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
 }

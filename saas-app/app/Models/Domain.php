@@ -31,5 +31,15 @@ class Domain extends Model
     {
         return $this->belongsToMany(User::class);
     }
+
+    /**
+     * Write code on Method
+     *
+     * @return response()
+     */
+    public function messages()
+    {
+        return $this->belongsToMany(Message::class);
+    }
     
 }
