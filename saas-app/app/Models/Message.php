@@ -15,4 +15,9 @@ class Message extends Model
      * @var array<int, string>
      */
     protected $fillable = ['username', 'message'];
+
+    public function domain()
+    {
+        return $this->belongsTo(Domain::class, 'domain', 'domain');
+    }
 }

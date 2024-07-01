@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('domain')->default(env('APP_DOMAIN_ADMIN'));
             $table->timestamps(); // Creates created_at and updated_at columns
             $table->softDeletes(); // Adds deleted_at column for soft deletes
-
+            $table->foreign('domain')->references('domain')->on('domains')->onDelete('cascade');
             // Add foreign key constraint
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });

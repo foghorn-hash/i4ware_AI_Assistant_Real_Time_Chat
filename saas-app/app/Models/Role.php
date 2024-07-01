@@ -23,4 +23,9 @@ class Role extends Model
         return $this->hasMany(RolePermissions::class, 'role_id', 'id');
     }
 
+    public function domain()
+    {
+        return $this->belongsTo(Domain::class, 'domain', 'domain');
+    }
+
 }
