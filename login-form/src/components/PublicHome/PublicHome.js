@@ -52,7 +52,6 @@ function PublicHome() {
         <video
             id="my-player"
             class="video-js PublicHomePlayer"
-            controls
             preload="auto"
             autoplay="true"
             loop="true"
