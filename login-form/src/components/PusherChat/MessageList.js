@@ -147,9 +147,9 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
     }
   
     try {
-      const response = await Axios.post(API_BASE_URL + '/api/guest/tts', { text, voice, message_id: messageId }, {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const response = await Axios.post(API_BASE_URL + '/api/chat/tts', { text, voice, message_id: messageId }, {
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
+        });
   
       if (response.status !== 200) {
         throw new Error('Failed to fetch audio data');
