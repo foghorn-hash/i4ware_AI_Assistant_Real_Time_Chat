@@ -33,7 +33,7 @@
 .loading-view {
     position: absolute;
     min-height: 120%;
-    z-index: 10000;
+    z-index: 1000;
     width: 100vw;
     display: flex;
     justify-content: center;
@@ -55,4 +55,11 @@
 	width: 50%;
     margin-top: 6px;
     margin-bottom: 5px;
+}
+
+@media screen and (max-width: 800px) {
+    .register-card {
+        width: 100%;
+    }
+    
 }
