@@ -40,6 +40,7 @@ let strings = new LocalizedStrings({
     aiTypingIndicator: "AI is thinking...",
     record_audio: "Record Audio",
     speech: "is recoding speech...",
+    speech_to_text: "Speech to Text",
   },
   fi: {
     send: "Lähetä",
@@ -67,6 +68,7 @@ let strings = new LocalizedStrings({
     aiTypingIndicator: "Tekoäly miettii ...",
     record_audio: "Nauhoita ääni",
     speech: "nauhoittaa puhetta...",
+    speech_to_text: "Puhe tekstiksi",
   },
   se: {
     send: "Skicka",
@@ -94,6 +96,7 @@ let strings = new LocalizedStrings({
     aiTypingIndicator: "AI tänker ...",
     record_audio: "Spela in ljud",
     speech: "spela in tal...",
+    speech_to_text: "Tal till text",
   }
 });
 
@@ -283,7 +286,7 @@ const PusherChat = () => {
     </div>
     <Modal show={showRecordAudioShowModal} onHide={handleRecordAudioCloseModal}>
       <Modal.Header className='message-upload-modal' closeButton>
-        <Modal.Title className='massage-upload-title'>{strings.capture_video_with_message}</Modal.Title>
+        <Modal.Title className='massage-upload-title'>{strings.speech_to_text}</Modal.Title>
       </Modal.Header>
       <Modal.Body className='message-upload-modal'>
         <AudioRecorder fetchMessages={fetchMessages} isThinking={isThinking} setIsThinking={setIsThinking} setSpeechIndicator={setSpeechIndicator} sendSpeechStatus={sendSpeechStatus} />
