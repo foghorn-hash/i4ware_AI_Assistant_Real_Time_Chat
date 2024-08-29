@@ -50,7 +50,7 @@ class OpenAIService
 
         $response = $this->client->post('/v1/chat/completions', [
             'json' => [
-                'model' => 'gpt-4o',
+                'model' => 'gpt-4o-mini',
                 'messages' => $messages,
                 'max_tokens' => $this->maxTokens,
             ],
