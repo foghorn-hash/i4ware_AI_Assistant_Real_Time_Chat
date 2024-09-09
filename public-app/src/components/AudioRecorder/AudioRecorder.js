@@ -5,6 +5,7 @@ import Axios from 'axios';
 import WaveSurfer from 'wavesurfer.js';
 import { Circle, Mic } from 'react-bootstrap-icons';
 import { API_BASE_URL, API_DEFAULT_LANGUAGE } from "../../constants/apiConstants";
+import Form from 'react-bootstrap/Form';
 import LocalizedStrings from 'react-localization';
 
 let strings = new LocalizedStrings({
@@ -14,6 +15,7 @@ let strings = new LocalizedStrings({
     volume: "Volume Level Meter",
     male: "Male",
     female: "Female",
+    generate_image: "Generate Image",
   },
   fi: { 
     ask_from_ai: "Kysy tekoälyltä",
@@ -21,6 +23,7 @@ let strings = new LocalizedStrings({
     volume: "Äänenvoimakkuusmittari",
     male: "Mies",
     female: "Nainen",
+    generate_image: "Luo kuva",
   },
   se: { 
     ask_from_ai: "Fråga en AI",
@@ -28,6 +31,7 @@ let strings = new LocalizedStrings({
     volume: "ljudvolym",
     male: "Man",
     female: "Kvinna",
+    generate_image: "Generera bild",
   }
 });
 
@@ -36,6 +40,7 @@ const AudioRecorder = ({ fetchMessages, setSpeechIndicator, sendSpeechStatus, se
   const [recorder, setRecorder] = useState(null);
   const [audioBlob, setAudioBlob] = useState(null);
   const [isAiEnabled, setIsAiEnabled] = useState(false);
+  const [isGenerateEnabled, setIsGenerateEnabled] = useState(false); // State to track AI checkbox
   const [gender, setGender] = useState('male');
   const audioRef = useRef(null);
   const waveformRef = useRef(null);
@@ -65,10 +70,6 @@ const AudioRecorder = ({ fetchMessages, setSpeechIndicator, sendSpeechStatus, se
     }
   }, [audioBlob]);
 
-  const handleAiCheckboxChange = (e) => {
-    setIsAiEnabled(e.target.checked);
-  };
-
   const handleChatGPTResponse = async (responseText) => {
     console.log('Received response from ChatGPT:', responseText);
     if (isAiEnabled) {
@@ -77,6 +78,12 @@ const AudioRecorder = ({ fetchMessages, setSpeechIndicator, sendSpeechStatus, se
       setIsThinking(true);
       await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
       await generateResponse(responseText);
+    } else if (isGenerateEnabled) {
+      sendSpeechStatus(false);
+      setSpeechIndicator('');
+      setIsThinking(true);
+      await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
+      await generateImage(responseText);
     }
     fetchMessages();
   };
@@ -130,6 +137,7 @@ const AudioRecorder = ({ fetchMessages, setSpeechIndicator, sendSpeechStatus, se
       const aiResponseMessage = {
         username: 'AI',
         message: response.data.response,
+        generate: false,
         gender,
         created_at: new Date().toISOString(),
       };
@@ -139,6 +147,26 @@ const AudioRecorder = ({ fetchMessages, setSpeechIndicator, sendSpeechStatus, se
       fetchMessages();
     } catch (error) {
       console.error('Error generating AI response:', error);
+    }
+  };
+
+  const generateImage = async (message) => {
+    try {
+      const response = await Axios.post(`${API_BASE_URL}/api/guest/generate-image`, { prompt: message, generate: true });
+      const highlightedHTML = response.data.response;
+      const aiResponseMessage = {
+        username: 'AI',
+        generate: true,
+        message: highlightedHTML,
+        created_at: new Date().toISOString(),
+      };
+      await saveMessageToDatabase(aiResponseMessage);
+      setIsThinking(false);
+      await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
+      fetchMessages(); // Fetch messages after generating AI response
+    } catch (error) {
+      console.error('Error:', error);
+      setIsThinking(false);
     }
   };
 
@@ -177,6 +205,16 @@ const AudioRecorder = ({ fetchMessages, setSpeechIndicator, sendSpeechStatus, se
     });
   };
 
+  const handleAiCheckboxChange = (e) => {
+    setIsAiEnabled(e.target.checked);
+    if (e.target.checked) setIsGenerateEnabled(false); // Uncheck the other option
+  };
+  
+  const handleGenerateCheckboxChange = (e) => {
+    setIsGenerateEnabled(e.target.checked);
+    if (e.target.checked) setIsAiEnabled(false); // Uncheck the other option
+  };
+
   return (
     <div>
       <audio className='audio-recorded' ref={audioRef} controls />
@@ -191,14 +229,24 @@ const AudioRecorder = ({ fetchMessages, setSpeechIndicator, sendSpeechStatus, se
         {isRecording ? <Circle /> : <Mic />}
       </button>
       <div className='audio-recorder-clear' />
-      {strings.ask_from_ai}
-      <input
-        type="checkbox"
-        className="message-ai"
-        name="ai"
-        checked={isAiEnabled}
-        onChange={handleAiCheckboxChange}
-      />
+      <Form.Check // prettier-ignore
+            type="radio"
+            className="message-ai"
+            name="ai-options"
+            label={strings.ask_from_ai}
+            checked={isAiEnabled}
+            onChange={handleAiCheckboxChange}
+            value="ai"
+          />
+          <Form.Check // prettier-ignore
+            type="radio"
+            className="generate-image-ai"
+            name="ai-options"
+            label={strings.generate_image}
+            checked={isGenerateEnabled}
+            onChange={handleGenerateCheckboxChange}
+            value="generate-image"
+          />
       <div className='audio-recorder-clear' />
       <select className='select-gender' id="gender" value={gender} onChange={(e) => setGender(e.target.value)}>
         <option value="male">{strings.male}</option>
