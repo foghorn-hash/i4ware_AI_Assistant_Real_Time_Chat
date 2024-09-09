@@ -10,6 +10,7 @@ import Swal from 'sweetalert2';
 import MessageList from './MessageList';
 import AudioRecorder from '../AudioRecorder/AudioRecorder';
 import { Mic } from 'react-bootstrap-icons';
+import Form from 'react-bootstrap/Form';
 import { API_BASE_URL, API_DOMAIN, API_DEFAULT_LANGUAGE, API_PUSHER_KEY, API_PUSHER_CLUSTER } from "../../constants/apiConstants";
 import LocalizedStrings from 'react-localization';
 
@@ -41,6 +42,7 @@ let strings = new LocalizedStrings({
     record_audio: "Record Audio",
     speech: "is recoding speech...",
     speech_to_text: "Speech to Text",
+    generate_image: "Generate Image",
   },
   fi: {
     send: "Lähetä",
@@ -69,6 +71,7 @@ let strings = new LocalizedStrings({
     record_audio: "Nauhoita ääni",
     speech: "nauhoittaa puhetta...",
     speech_to_text: "Puhe tekstiksi",
+    generate_image: "Luo kuva",
   },
   se: {
     send: "Skicka",
@@ -97,6 +100,7 @@ let strings = new LocalizedStrings({
     record_audio: "Spela in ljud",
     speech: "spela in tal...",
     speech_to_text: "Tal till text",
+    generate_image: "Generera bild",
   }
 });
 
@@ -108,6 +112,7 @@ const PusherChat = () => {
   const [speechIndicator, setSpeechIndicator] = useState('');
   const [aiTypingIndicator, setAiTypingIndicator] = useState('');
   const [isAiEnabled, setIsAiEnabled] = useState(false); // State to track AI checkbox
+  const [isGenerateEnabled, setIsGenerateEnabled] = useState(false); // State to track AI checkbox
   const typingTimeoutRef = useRef(null);
   const [showRecordAudioShowModal, setRecordAudioShowModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -207,6 +212,7 @@ const PusherChat = () => {
   const submitMessage = async (e) => {
     e.preventDefault();
     try {
+      const optionSelected = isAiEnabled ? 'ask_from_ai' : isGenerateEnabled ? 'generate_image' : null;
       await Axios.post(`${API_BASE_URL}/api/guest/messages`, { username, message });
       setMessage('');
       sendTypingStatus(false);
@@ -214,6 +220,10 @@ const PusherChat = () => {
         setIsThinking(true);
         await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
         await generateResponse();
+      } else if (isGenerateEnabled) {
+        setIsThinking(true);
+        await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
+        await generateImage();
       } else {
         fetchMessages(); // Fetch messages after sending user message
       }
@@ -224,6 +234,12 @@ const PusherChat = () => {
 
   const handleAiCheckboxChange = (e) => {
     setIsAiEnabled(e.target.checked);
+    if (e.target.checked) setIsGenerateEnabled(false); // Uncheck the other option
+  };
+  
+  const handleGenerateCheckboxChange = (e) => {
+    setIsGenerateEnabled(e.target.checked);
+    if (e.target.checked) setIsAiEnabled(false); // Uncheck the other option
   };
 
   const generateResponse = async () => {
@@ -232,6 +248,27 @@ const PusherChat = () => {
       const highlightedHTML = response.data.response;
       const aiResponseMessage = {
         username: 'AI',
+        message: highlightedHTML,
+        generate: false,
+        created_at: new Date().toISOString(),
+      };
+      await saveMessageToDatabase(aiResponseMessage);
+      setIsThinking(false);
+      await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
+      fetchMessages(); // Fetch messages after generating AI response
+    } catch (error) {
+      console.error('Error:', error);
+      setIsThinking(false);
+    }
+  };
+
+  const generateImage = async () => {
+    try {
+      const response = await Axios.post(`${API_BASE_URL}/api/guest/generate-image`, { prompt: message, generate: true });
+      const highlightedHTML = response.data.response;
+      const aiResponseMessage = {
+        username: 'AI',
+        generate: true,
         message: highlightedHTML,
         created_at: new Date().toISOString(),
       };
@@ -265,13 +302,23 @@ const PusherChat = () => {
       {isThinking && <div className="typing-indicator">{strings.aiTypingIndicator}</div>}
       <form className="message-form">
         <div>
-          {strings.ask_from_ai}
-          <input
-            type="checkbox"
+          <Form.Check // prettier-ignore
+            type="radio"
             className="message-ai"
-            name="ai"
+            name="ai-options"
+            label={strings.ask_from_ai}
             checked={isAiEnabled}
             onChange={handleAiCheckboxChange}
+            value="ai"
+          />
+          <Form.Check // prettier-ignore
+            type="radio"
+            className="generate-image-ai"
+            name="ai-options"
+            label={strings.generate_image}
+            checked={isGenerateEnabled}
+            onChange={handleGenerateCheckboxChange}
+            value="generate-image"
           />
         </div>
         <textarea

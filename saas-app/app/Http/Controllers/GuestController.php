@@ -26,7 +26,7 @@ class GuestController extends Controller
     public function __construct(OpenAIService $openAiService)
     {
         //$this->apiToken = uniqid(base64_encode(Str::random(40)));
-        $this->middleware('auth:api', ["except" => ["message", "getMessages", "userTyping", "speech", "generateResponse", "saveMessageToDatabase", "thinking", "synthesize", "transcribe"]]);
+        $this->middleware('auth:api', ["except" => ["message", "getMessages", "userTyping", "speech", "generateResponse", "generateImage", "saveMessageToDatabase", "thinking", "synthesize", "transcribe"]]);
         $this->user = new User;
         $this->openAiService = $openAiService;
     }
@@ -112,29 +112,53 @@ class GuestController extends Controller
         return response()->json(['response' => $response]);
     }
 
+    public function generateImage(Request $request) {
+        
+        $prompt = $request->input('prompt');
+        $response = $this->openAiService->generateImage($prompt);
+
+        return response()->json(['response' => $response]);
+
+    }
+
     public function saveMessageToDatabase(Request $request)
     {       
+        $request = $request->all();
+        
+        $generate = $request['generate'];
 
-        // Validate incoming request data
-        $validator = Validator::make($request->all(), [
-            'message' => 'required|string',
-        ]);
+        $message = new MessageModel();
 
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()], 422);
+        if ($generate===true) {
+
+            // Generate a unique filename
+            $file = file_get_contents($request['message']['data'][0]['url']);
+            $fileName = 'ai_images/' . uniqid() . '.png';
+            Storage::disk('public')->put($fileName, $file);
+
+            $message->username = "AI";
+            $message->user_id = null;
+            $message->domain = env('APP_DOMAIN_ADMIN');
+            $message->image_path = 'storage/' . $fileName;
+            $message->message = $request['message']['data'][0]['revised_prompt'];
+            $message->type = "image";
+            $message->gender = "male";
+
+        } else {
+        
+            // Create new message
+            $prompt = $request['message'];
+
+            $highlightedMessage = $prompt; // No syntax highlighting needed
+            
+            $message->username = "AI";
+            $message->user_id = null;
+            $message->domain = env('APP_DOMAIN_ADMIN');
+            $message->message = $highlightedMessage;
+            $message->gender = "male";
+
         }
 
-        $prompt = $request->input('message');
-
-        $highlightedMessage = $prompt; // No syntax highlighting needed
-        
-        // Create new message
-        $message = new MessageModel();
-        $message->username = "AI";
-        $message->user_id = null;
-        $message->domain = env('APP_DOMAIN_ADMIN');
-        $message->message = $highlightedMessage;
-        $message->gender = $request->input('gender');
         $message->save();
 
         // Trigger an event for the new message

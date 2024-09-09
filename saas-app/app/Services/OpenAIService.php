@@ -59,6 +59,23 @@ class OpenAIService
         return json_decode($response->getBody(), true)['choices'][0]['message']['content'] ?? '';
     }
 
+    public function generateImage($prompt)
+    {
+        // Assuming 'transcription' is a variable containing user input or text
+        $transcription = $prompt;
+
+        $response = $this->client->post('v1/images/generations', [
+            'json' => [
+                'model' => 'dall-e-3',
+                'prompt' => $transcription,
+                'n' => 1,
+                'size' => '1024x1024',
+            ],
+        ]);
+
+        return json_decode($response->getBody(), true) ?? '';
+    }
+
     public function synthesizeSpeech($text, $voice)
     {
 

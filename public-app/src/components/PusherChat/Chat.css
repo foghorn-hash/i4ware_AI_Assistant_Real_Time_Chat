@@ -115,6 +115,7 @@
 	flex-grow: 1;
 	padding: 10px;
 	margin-right: 10px;
+	margin-left: 20px;
 	border-radius: 8px;
 	border: 1px solid #333333;
 	background-color: #262626; 
@@ -150,6 +151,13 @@
 .message-ai {
 	margin-left: 10px;
 	margin-right: 10px;
+	text-align: left;
+}
+
+.generate-image-ai {
+	margin-left: 10px;
+	margin-right: 10px;
+	text-align: left;
 }
 
 .hljs {

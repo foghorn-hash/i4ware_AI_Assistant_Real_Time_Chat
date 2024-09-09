@@ -96,4 +96,5 @@ Route::group(['prefix' => 'guest', 'middleware' => 'CORS'], function ($router) {
 	Route::post('/save-message', [GuestController::class, 'saveMessageToDatabase']);
 	Route::post('/tts', [GuestController::class, 'synthesize']);
 	Route::post('/stt', [GuestController::class, 'transcribe']);
+	Route::post('/generate-image', [GuestController::class, 'generateImage']);
 });
