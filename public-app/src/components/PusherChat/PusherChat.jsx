@@ -321,7 +321,6 @@ const PusherChat = () => {
             value="generate-image"
           />
         </div>
-        <br />
         <textarea
           className="message-input"
           placeholder={strings.box}
