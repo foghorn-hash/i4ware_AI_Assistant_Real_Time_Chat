@@ -121,6 +121,10 @@
 	background-color: #262626; 
 	color: #f2f2f2;
   }
+
+  .message-ask-from-ai {
+	clear: both;
+  }
   
   .send-button {
 	padding: 10px 20px;

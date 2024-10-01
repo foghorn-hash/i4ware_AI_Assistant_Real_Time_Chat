@@ -301,7 +301,7 @@ const PusherChat = () => {
       {speechIndicator && <div className="typing-indicator">{speechIndicator}</div>}
       {isThinking && <div className="typing-indicator">{strings.aiTypingIndicator}</div>}
       <form className="message-form">
-        <div>
+        <div className='message-ask-from-ai'>
           <Form.Check // prettier-ignore
             type="radio"
             className="message-ai"
@@ -321,6 +321,7 @@ const PusherChat = () => {
             value="generate-image"
           />
         </div>
+        <br />
         <textarea
           className="message-input"
           placeholder={strings.box}
