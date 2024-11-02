@@ -11,6 +11,7 @@ import MessageList from './MessageList';
 import AudioRecorder from '../AudioRecorder/AudioRecorder';
 import { Mic } from 'react-bootstrap-icons';
 import Form from 'react-bootstrap/Form';
+import RecordRTC from 'recordrtc';
 import { API_BASE_URL, API_DOMAIN, API_DEFAULT_LANGUAGE, API_PUSHER_KEY, API_PUSHER_CLUSTER } from "../../constants/apiConstants";
 import LocalizedStrings from 'react-localization';
 
@@ -124,6 +125,12 @@ const PusherChat = () => {
   const [videoUploading, setvideoUploading] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
   const [isThinking, setIsThinking] = useState(false);
+  const [isRealTime, setIsRealTime] = useState(false); // State to toggle real-time vs non-real-time
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const audioRef = useRef(null);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [gender, setGender] = useState('male');
 
   const handleRecordAudioShowModal = () => setRecordAudioShowModal(true);
   const handleRecordAudioCloseModal = () => setRecordAudioShowModal(false);
@@ -140,10 +147,16 @@ const PusherChat = () => {
 
   // Initialize Pusher and fetch initial messages
   useEffect(() => {
-    const cleanup = initializePusher();
-    fetchMessages(); // Fetch messages on component mount
-    return cleanup;
-  }, []);
+    let cleanup;
+    if (isRealTime) {
+      cleanup = initializePusher();
+    } else {
+      fetchMessages();
+    }
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [isRealTime]);
 
   const initializePusher = () => {
     const pusher = new Pusher(API_PUSHER_KEY, { cluster: API_PUSHER_CLUSTER });
@@ -290,13 +303,163 @@ const PusherChat = () => {
     }
   };
 
+  const toggleRealTime = () => {
+    setIsRealTime(!isRealTime);
+};
+
+const startRecording = async () => {
+    setIsRecording(true);
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = RecordRTC(stream, {
+        type: 'audio',
+        mimeType: 'audio/mp3',
+    });
+
+    recorder.ondataavailable = async (event) => {
+        if (isRealTime) {
+            await handleRealTimeChunk(event.data);
+        } else {
+            handleSingleChunk(event.data);
+        }
+    };
+
+    recorder.startRecording(); // Record in small chunks if real-time
+    setMediaRecorder(recorder);
+};
+
+const stopRecording = async () => {
+    mediaRecorder.stopRecording(async () => {
+        const blob = mediaRecorder.getBlob();
+        audioRef.current.src = URL.createObjectURL(blob);
+        setAudioBlob(blob);
+
+        const formData = new FormData();
+        formData.append('audio', blob, 'recording.mp3');
+        formData.append('gender', gender);
+
+        try {
+            const response = await Axios.post(`${API_BASE_URL}/api/guest/stt`, formData);
+            console.log('Transcription result:', response.data.transcription);
+            await handleChatGPTResponse(response.data.transcription);
+        } catch (error) {
+            console.error('Error uploading audio file:', error);
+        }
+
+        setIsRecording(false);
+    });
+};
+
+const startRealTimeRecording = async () => {
+    await startRecording();
+};
+
+const handleRealTimeChunk = async (audioBlob) => {
+    try {
+        // Send the audio blob to Whisper API for transcription
+        const transcription = await getTranscription(audioBlob);
+        const responseText = await getChatResponse(transcription);
+        handleAudioResponse(responseText);
+    } catch (error) {
+        console.error('Error handling real-time chunk:', error);
+    }
+};
+
+const startSingleRecording = async () => {
+    await startRecording();
+};
+
+const handleSingleChunk = async (audioBlob) => {
+    try {
+        const transcription = await getTranscription(audioBlob);
+        const responseText = await getChatResponse(transcription);
+        handleAudioResponse(responseText);
+    } catch (error) {
+        console.error('Error handling single chunk:', error);
+    }
+};
+
+const handleAudioResponse = (responseText) => {
+    const synth = window.speechSynthesis;
+    const utterance = new SpeechSynthesisUtterance(responseText);
+    synth.speak(utterance);
+};
+
+// Functions for interacting with Whisper API and OpenAI Chat
+const getTranscription = async (audioBlob) => {
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "audio.mp3");
+
+    try {
+        const response = await Axios.post(`${API_BASE_URL}/api/guest/stt`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data.transcription; // Assuming transcription text is returned
+    } catch (error) {
+        console.error('Error getting transcription:', error);
+        throw error; // Rethrow to handle further up
+    }
+};
+
+const getChatResponse = async (text) => {
+    try {
+        const response = await Axios.post(`${API_BASE_URL}/api/guest/tts`, {
+            text: text,
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+        return response.data.url; // Assuming OpenAI's audio file URL is returned
+    } catch (error) {
+        console.error('Error getting chat response:', error);
+        throw error; // Rethrow to handle further up
+    }
+};
+
+const handleChatGPTResponse = async (responseText) => {
+  console.log('Received response from ChatGPT:', responseText);
+  if (isAiEnabled) {
+    sendSpeechStatus(false);
+    setSpeechIndicator('');
+    setIsThinking(true);
+    await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
+    await generateResponse(responseText);
+  } else if (isGenerateEnabled) {
+    sendSpeechStatus(false);
+    setSpeechIndicator('');
+    setIsThinking(true);
+    await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
+    await generateImage(responseText);
+  }
+  fetchMessages();
+};
+
   return (
     <>
     <div className="chat-container">
       <Button variant="primary" className='message-record-audio-button' onClick={handleRecordAudioShowModal}>
         <Mic />
       </Button>
-      <MessageList messages={messages} DefaultMaleImage={DefaultMaleImage} DefaultFemaleImage={DefaultFemaleImage} />
+      <Button 
+          className='message-record-audio-button' 
+          onClick={async () => {
+              if (isRecording) {
+                  await stopRecording();
+              } else {
+                  if (isRealTime) {
+                      await startRealTimeRecording();
+                  } else {
+                      await startSingleRecording();
+                  }
+              }
+          }}
+      >
+          <Mic /> {isRecording ? "Stop Recording" : (isRealTime ? "Switch to Non-Real-Time" : "Switch to Real-Time")}
+      </Button>
+      <audio className='audio-recorded-front' ref={audioRef} controls />
+      <MessageList messages={messages} DefaultMaleImage={DefaultMaleImage} DefaultFemaleImage={DefaultFemaleImage} isRealTime={isRealTime} fetchMessages={fetchMessages} />
       {typingIndicator && <div className="typing-indicator">{typingIndicator}</div>}
       {speechIndicator && <div className="typing-indicator">{speechIndicator}</div>}
       {isThinking && <div className="typing-indicator">{strings.aiTypingIndicator}</div>}

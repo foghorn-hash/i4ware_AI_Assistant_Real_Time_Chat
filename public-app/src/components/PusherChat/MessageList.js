@@ -24,7 +24,7 @@ let strings = new LocalizedStrings({
   }
 });
 
-const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
+const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage, isRealTime, fetchMessages }) => {
   const messagesEndRef = useRef(null);
   const [currentMessageId, setCurrentMessageId] = useState(null);
   const [currentAudio, setCurrentAudio] = useState(null);
@@ -172,6 +172,13 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
       console.error('Error generating speech:', error);
     }
   };
+
+  useEffect(() => {
+    if (!isRealTime) {
+      const pollingInterval = setInterval(fetchMessages, 5000); // Poll every 5 seconds
+      return () => clearInterval(pollingInterval);
+    }
+  }, [isRealTime]);
 
   return (
     <div className="messages-list">
