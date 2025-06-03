@@ -161,6 +161,18 @@
 	text-align: left;
 }
 
+.generate-word-ai {
+	margin-left: 10px;
+	margin-right: 10px;
+	text-align: left;
+}
+
+.generate-ppt-ai {
+	margin-left: 10px;
+	margin-right: 10px;
+	text-align: left;
+}
+
 .hljs {
 	display: block;
 	overflow-x: auto;

@@ -123,41 +123,81 @@ class GuestController extends Controller
 
     public function saveMessageToDatabase(Request $request)
     {       
-        $request = $request->all();
-        
-        $generate = $request['generate'];
+        $data = $request->all();
+        $generate = $data['generate'] ?? false;
+        $type = $data['type'] ?? 'text'; // Default to text if not specified
 
         $message = new MessageModel();
 
-        if ($generate===true) {
+        if ($generate === true) {
+            // Image message
+            if (isset($data['message']['data'][0]['url'])) {
+                $file = file_get_contents($data['message']['data'][0]['url']);
+                $fileName = 'ai_images/' . uniqid() . '.png';
+                Storage::disk('public')->put($fileName, $file);
 
-            // Generate a unique filename
-            $file = file_get_contents($request['message']['data'][0]['url']);
-            $fileName = 'ai_images/' . uniqid() . '.png';
-            Storage::disk('public')->put($fileName, $file);
-
-            $message->username = "AI";
-            $message->user_id = null;
-            $message->domain = env('APP_DOMAIN_ADMIN');
-            $message->image_path = 'storage/' . $fileName;
-            $message->message = $request['message']['data'][0]['revised_prompt'];
-            $message->type = "image";
-            $message->gender = "male";
-
+                $message->username = "AI";
+                $message->user_id = null;
+                $message->domain = env('APP_DOMAIN_ADMIN');
+                $message->image_path = 'storage/' . $fileName;
+                $message->message = $data['message']['data'][0]['revised_prompt'] ?? '';
+                $message->type = "image";
+                $message->gender = "male";
+                $prompt = $message->message;
+            } else {
+                // Fallback for missing image data
+                $message->username = "AI";
+                $message->user_id = null;
+                $message->domain = env('APP_DOMAIN_ADMIN');
+                $message->message = '';
+                $message->type = "image";
+                $message->gender = "male";
+                $prompt = '';
+            }
         } else {
-        
-            // Create new message
-            $prompt = $request['message'];
 
-            $highlightedMessage = $prompt; // No syntax highlighting needed
-            
+            if ($type === 'docx') {
+                
+            // Text/Word message
+            $prompt = $data['message'] ?? '';
+            $filename = $data['filename'] ?? null; // filename should be sent from frontend after Word file is generated
+
             $message->username = "AI";
             $message->user_id = null;
             $message->domain = env('APP_DOMAIN_ADMIN');
-            $message->message = $highlightedMessage;
+            $message->message = $prompt; // Convert newlines to <br> for HTML display
+            $message->file_path = 'storage/' . $filename; // Store the file path for the Word document
+            $message->download_link = url('/storage/' . $filename); // No image path for Word documents
+            $message->type = "docx";
             $message->gender = "male";
+            
+            } else if ($type === 'pptx') {
+                    
+                    // Text/PowerPoint message
+                    $prompt = $data['message'] ?? '';
+                    $filename = $data['filename'] ?? null; // filename should be sent from frontend after PowerPoint file is generated
+                    $message->file_path = 'storage/' . $filename; // Store the file path for the Word document
+                    $message->download_link = url('/storage/' . $filename); // No image path for Word documents
+                    $message->username = "AI";
+                    $message->user_id = null;
+                    $message->domain = env('APP_DOMAIN_ADMIN');
+                    $message->message = $prompt; // Convert newlines to <br> for HTML display
+                    $message->type = "pptx";
+                
+            } else {
+                // Create new message
+                $prompt = $request['message'];
 
+                $highlightedMessage = $prompt; // No syntax highlighting needed
+                
+                $message->username = "AI";
+                $message->user_id = null;
+                $message->domain = env('APP_DOMAIN_ADMIN');
+                $message->message = $highlightedMessage;
+                $message->gender = "male";
+            }
         }
+        // Save the message to the database
 
         $message->save();
 

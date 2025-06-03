@@ -16,6 +16,8 @@ let strings = new LocalizedStrings({
     male: "Male",
     female: "Female",
     generate_image: "Generate Image",
+    generate_word: "Generate Word Document",
+    generate_ppt: "Generate PowerPoint Presentation",
   },
   fi: { 
     ask_from_ai: "Kysy tekoälyltä",
@@ -24,6 +26,8 @@ let strings = new LocalizedStrings({
     male: "Mies",
     female: "Nainen",
     generate_image: "Luo kuva",
+    generate_word: "Luo Word-asiakirja",
+    generate_ppt: "Luo PowerPoint-esitys",
   },
   se: { 
     ask_from_ai: "Fråga en AI",
@@ -31,7 +35,9 @@ let strings = new LocalizedStrings({
     volume: "ljudvolym",
     male: "Man",
     female: "Kvinna",
-    generate_image: "Generera bild",
+    generate_image: "Generera bild",    
+    generate_word: "Generera Word-dokument",
+    generate_ppt: "Generera PowerPoint-presentation",
   }
 });
 
@@ -41,6 +47,8 @@ const AudioRecorder = ({ fetchMessages, setSpeechIndicator, sendSpeechStatus, se
   const [audioBlob, setAudioBlob] = useState(null);
   const [isAiEnabled, setIsAiEnabled] = useState(false);
   const [isGenerateEnabled, setIsGenerateEnabled] = useState(false); // State to track AI checkbox
+  const [isGenerateWordEnabled, setIsGenerateWordEnabled] = useState(false);
+  const [isGeneratePPTEnabled, setIsGeneratePPTEnabled] = useState(false);
   const [gender, setGender] = useState('male');
   const audioRef = useRef(null);
   const waveformRef = useRef(null);
@@ -50,6 +58,7 @@ const AudioRecorder = ({ fetchMessages, setSpeechIndicator, sendSpeechStatus, se
   const analyserRef = useRef(null);
   const meterRef = useRef(null);
   const animationFrameIdRef = useRef(null);
+  const [message, setMessage] = useState('');
 
   const urlParams = new URLSearchParams(window.location.search.substring(1));
   const localization = urlParams.get('lang') || API_DEFAULT_LANGUAGE;
@@ -84,6 +93,12 @@ const AudioRecorder = ({ fetchMessages, setSpeechIndicator, sendSpeechStatus, se
       setIsThinking(true);
       await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
       await generateImage(responseText);
+    } else if (isGenerateWordEnabled) {
+      setMessage(responseText);
+        await generateAndDownloadWord();
+    } else if (isGeneratePPTEnabled) {
+      setMessage(responseText);
+        await generateAndDownloadPPT();
     }
     fetchMessages();
   };
@@ -138,7 +153,7 @@ const AudioRecorder = ({ fetchMessages, setSpeechIndicator, sendSpeechStatus, se
         username: 'AI',
         message: response.data.response,
         generate: false,
-        gender,
+        gender: 'female',
         created_at: new Date().toISOString(),
       };
       await saveMessageToDatabase(aiResponseMessage);
@@ -205,14 +220,90 @@ const AudioRecorder = ({ fetchMessages, setSpeechIndicator, sendSpeechStatus, se
     });
   };
 
-  const handleAiCheckboxChange = (e) => {
+   const handleAiCheckboxChange = (e) => {
     setIsAiEnabled(e.target.checked);
-    if (e.target.checked) setIsGenerateEnabled(false); // Uncheck the other option
+    if (e.target.checked) {
+      setIsGenerateEnabled(false);
+      setIsGenerateWordEnabled(false);
+      setIsGeneratePPTEnabled(false);
+    }
   };
-  
+
   const handleGenerateCheckboxChange = (e) => {
     setIsGenerateEnabled(e.target.checked);
-    if (e.target.checked) setIsAiEnabled(false); // Uncheck the other option
+    if (e.target.checked) {
+      setIsAiEnabled(false);
+      setIsGenerateWordEnabled(false);
+      setIsGeneratePPTEnabled(false);
+    }
+  };
+
+  const handleGenerateCheckboxWordChange = (e) => {
+    setIsGenerateWordEnabled(e.target.checked);
+    if (e.target.checked) {
+      setIsAiEnabled(false);
+      setIsGenerateEnabled(false);
+      setIsGeneratePPTEnabled(false);
+    }
+  };
+
+  const handleGenerateCheckboxPPTChange = (e) => {
+    setIsGeneratePPTEnabled(e.target.checked);
+    if (e.target.checked) {
+      setIsAiEnabled(false);
+      setIsGenerateEnabled(false);
+      setIsGenerateWordEnabled(false);
+    }
+  };
+
+  const generateAndDownloadWord = async () => {
+      try {
+        setIsThinking(true);
+        // 1. Generate the Word file in backend
+        const response = await Axios.post(`${API_BASE_URL}/api/chatgpt/word/send`, { prompt: message, generate: false });
+        // Optionally, save the message to DB as before
+        const highlightedHTML = response.data.message;
+        const aiResponseMessage = {
+          username: 'AI',
+          generate: false,
+          message: highlightedHTML,
+          created_at: new Date().toISOString(),
+          filename: response.data.filename || 'generated.docx', // Assuming backend returns a filename
+        };
+        await saveMessageToDatabase(aiResponseMessage);
+  
+        setIsThinking(false);
+        await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
+        fetchMessages();
+      } catch (error) {
+        console.error('Error:', error);
+        setIsThinking(false);
+      }
+  };
+
+  const generateAndDownloadPPT= async () => {
+      try {
+        setIsThinking(true);
+        // 1. Generate the Word file in backend
+        const response = await Axios.post(`${API_BASE_URL}/api/chatgpt/powerpoint/send`, { prompt: message, generate: false });
+        // Optionally, save the message to DB as before
+        const highlightedHTML = response.data.message;
+        const aiResponseMessage = {
+          username: 'AI',
+          generate: false,
+          message: highlightedHTML,
+          created_at: new Date().toISOString(),
+          filename: response.data.filename || 'generated.pptx', // Assuming backend returns a filename
+        };
+        await saveMessageToDatabase(aiResponseMessage);
+  
+        setIsThinking(false);
+        await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
+        fetchMessages();
+      } catch (error) {
+        console.error('Error:', error);
+        setIsThinking(false);
+      }
   };
 
   return (
@@ -229,7 +320,7 @@ const AudioRecorder = ({ fetchMessages, setSpeechIndicator, sendSpeechStatus, se
         {isRecording ? <Circle /> : <Mic />}
       </button>
       <div className='audio-recorder-clear' />
-      <Form.Check // prettier-ignore
+          <Form.Check // prettier-ignore
             type="radio"
             className="message-ai"
             name="ai-options"

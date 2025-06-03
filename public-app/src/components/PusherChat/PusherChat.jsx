@@ -43,6 +43,8 @@ let strings = new LocalizedStrings({
     speech: "is recoding speech...",
     speech_to_text: "Speech to Text",
     generate_image: "Generate Image",
+    generate_word: "Generate Word Document",
+    generate_ppt: "Generate PowerPoint Presentation",
   },
   fi: {
     send: "Lähetä",
@@ -72,6 +74,8 @@ let strings = new LocalizedStrings({
     speech: "nauhoittaa puhetta...",
     speech_to_text: "Puhe tekstiksi",
     generate_image: "Luo kuva",
+    generate_word: "Luo Word-asiakirja",
+    generate_ppt: "Luo PowerPoint-esitys",
   },
   se: {
     send: "Skicka",
@@ -101,6 +105,8 @@ let strings = new LocalizedStrings({
     speech: "spela in tal...",
     speech_to_text: "Tal till text",
     generate_image: "Generera bild",
+    generate_word: "Generera Word-dokument",
+    generate_ppt: "Generera PowerPoint-presentation",
   }
 });
 
@@ -113,6 +119,8 @@ const PusherChat = () => {
   const [aiTypingIndicator, setAiTypingIndicator] = useState('');
   const [isAiEnabled, setIsAiEnabled] = useState(false); // State to track AI checkbox
   const [isGenerateEnabled, setIsGenerateEnabled] = useState(false); // State to track AI checkbox
+  const [isGenerateWordEnabled, setIsGenerateWordEnabled] = useState(false);
+  const [isGeneratePPTEnabled, setIsGeneratePPTEnabled] = useState(false);
   const typingTimeoutRef = useRef(null);
   const [showRecordAudioShowModal, setRecordAudioShowModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -212,9 +220,6 @@ const PusherChat = () => {
   const submitMessage = async (e) => {
     e.preventDefault();
     try {
-      const optionSelected = isAiEnabled ? 'ask_from_ai' : isGenerateEnabled ? 'generate_image' : null;
-      await Axios.post(`${API_BASE_URL}/api/guest/messages`, { username, message });
-      setMessage('');
       sendTypingStatus(false);
       if (isAiEnabled) {
         setIsThinking(true);
@@ -224,9 +229,16 @@ const PusherChat = () => {
         setIsThinking(true);
         await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
         await generateImage();
+      } else if (isGenerateWordEnabled) {
+        await generateAndDownloadWord();
+      } else if (isGeneratePPTEnabled) {
+        await generateAndDownloadPPT();
       } else {
+        await Axios.post(`${API_BASE_URL}/api/guest/messages`, { username, message });
+        setMessage('');
         fetchMessages(); // Fetch messages after sending user message
       }
+      setMessage('');
     } catch (error) {
       console.error('Failed to send message', error);
     }
@@ -234,12 +246,38 @@ const PusherChat = () => {
 
   const handleAiCheckboxChange = (e) => {
     setIsAiEnabled(e.target.checked);
-    if (e.target.checked) setIsGenerateEnabled(false); // Uncheck the other option
+    if (e.target.checked) {
+      setIsGenerateEnabled(false);
+      setIsGenerateWordEnabled(false);
+      setIsGeneratePPTEnabled(false);
+    }
   };
-  
+
   const handleGenerateCheckboxChange = (e) => {
     setIsGenerateEnabled(e.target.checked);
-    if (e.target.checked) setIsAiEnabled(false); // Uncheck the other option
+    if (e.target.checked) {
+      setIsAiEnabled(false);
+      setIsGenerateWordEnabled(false);
+      setIsGeneratePPTEnabled(false);
+    }
+  };
+
+  const handleGenerateCheckboxWordChange = (e) => {
+    setIsGenerateWordEnabled(e.target.checked);
+    if (e.target.checked) {
+      setIsAiEnabled(false);
+      setIsGenerateEnabled(false);
+      setIsGeneratePPTEnabled(false);
+    }
+  };
+
+  const handleGenerateCheckboxPPTChange = (e) => {
+    setIsGeneratePPTEnabled(e.target.checked);
+    if (e.target.checked) {
+      setIsAiEnabled(false);
+      setIsGenerateEnabled(false);
+      setIsGenerateWordEnabled(false);
+    }
   };
 
   const generateResponse = async () => {
@@ -272,7 +310,7 @@ const PusherChat = () => {
         message: highlightedHTML,
         created_at: new Date().toISOString(),
       };
-      await saveMessageToDatabase(aiResponseMessage);
+      await saveMessageToDatabase(aiResponseMessage, 'image');
       setIsThinking(false);
       await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
       fetchMessages(); // Fetch messages after generating AI response
@@ -282,9 +320,65 @@ const PusherChat = () => {
     }
   };
 
-  const saveMessageToDatabase = async (message) => {
+  const generateAndDownloadWord = async () => {
     try {
-      await Axios.post(`${API_BASE_URL}/api/guest/save-message`, message);
+      await Axios.post(`${API_BASE_URL}/api/guest/messages`, { username, message });
+      fetchMessages(); // Fetch messages after sending user message
+      setIsThinking(true);
+      // 1. Generate the Word file in backend
+      const response = await Axios.post(`${API_BASE_URL}/api/chatgpt/word/send`, { prompt: message, generate: false });
+      // Optionally, save the message to DB as before
+      const highlightedHTML = response.data.message;
+      const aiResponseMessage = {
+        username: 'AI',
+        generate: false,
+        message: highlightedHTML,
+        created_at: new Date().toISOString(),
+        filename: response.data.filename || 'generated.docx', // Assuming backend returns a filename
+        type: 'docx',
+      };
+      await saveMessageToDatabase(aiResponseMessage, 'docx');
+
+      setIsThinking(false);
+      await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
+      fetchMessages();
+    } catch (error) {
+      console.error('Error:', error);
+      setIsThinking(false);
+    }
+  };
+
+  const generateAndDownloadPPT = async () => {
+    try {
+      await Axios.post(`${API_BASE_URL}/api/guest/messages`, { username, message });
+      fetchMessages(); // Fetch messages after sending user message
+      setIsThinking(true);
+      // 1. Generate the Word file in backend
+      const response = await Axios.post(`${API_BASE_URL}/api/chatgpt/powerpoint/send`, { prompt: message, generate: false });
+      // Optionally, save the message to DB as before
+      const highlightedHTML = response.data.message;
+      const aiResponseMessage = {
+        username: 'AI',
+        generate: false,
+        message: highlightedHTML,
+        created_at: new Date().toISOString(),
+        filename: response.data.filename || 'generated.pptx', // Assuming backend returns a filename
+        type: 'pptx',
+      };
+      await saveMessageToDatabase(aiResponseMessage, 'pptx');
+
+      setIsThinking(false);
+      await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
+      fetchMessages();
+    } catch (error) {
+      console.error('Error:', error);
+      setIsThinking(false);
+    }
+  };
+
+  const saveMessageToDatabase = async (message, type) => {
+    try {
+      await Axios.post(`${API_BASE_URL}/api/guest/save-message`, message, type);
     } catch (error) {
       console.error('Error saving message to database:', error);
     }
@@ -319,6 +413,15 @@ const PusherChat = () => {
             checked={isGenerateEnabled}
             onChange={handleGenerateCheckboxChange}
             value="generate-image"
+          />
+          <Form.Check // prettier-ignore
+            type="radio"
+            className="generate-word-ai"
+            name="ai-options"
+            label={strings.generate_word}
+            checked={isGenerateWordEnabled}
+            onChange={handleGenerateCheckboxWordChange}
+            value="generate-word"
           />
         </div>
         <textarea

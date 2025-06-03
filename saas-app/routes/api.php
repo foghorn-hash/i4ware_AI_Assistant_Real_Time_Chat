@@ -12,6 +12,8 @@ use App\Http\Controllers\StlController;
 use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\GuestController;
+use App\Http\Controllers\WordController;
+use App\Http\Controllers\PowerPointController;
 
 /*
 |--------------------------------------------------------------------------
@@ -97,4 +99,9 @@ Route::group(['prefix' => 'guest', 'middleware' => 'CORS'], function ($router) {
 	Route::post('/tts', [GuestController::class, 'synthesize']);
 	Route::post('/stt', [GuestController::class, 'transcribe']);
 	Route::post('/generate-image', [GuestController::class, 'generateImage']);
+});
+
+Route::group(['prefix' => 'chatgpt', 'middleware' => 'CORS'], function ($router) {
+	Route::post('/word/send', [WordController::class, 'generateWordFile'])->name('chatgpt.generate.word');
+	Route::post('/powerpoint/send', [PowerPointController::class, 'generatePPT'])->name('chatgpt.generate.powerpoint');
 });
