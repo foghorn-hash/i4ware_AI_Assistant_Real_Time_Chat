@@ -16,6 +16,9 @@ use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use PhpOffice\PhpWord\PhpWord;
+use PhpOffice\PhpWord\IOFactory;
+use Illuminate\Support\Facades\Response;
 
 class ChatController extends Controller
 {
@@ -223,30 +226,49 @@ class ChatController extends Controller
     public function saveMessageToDatabase(Request $request)
     {       
         $user = Auth::user();
+        $request = $request->all();
+        
+        $generate = $request['generate'];
 
-        // Validate incoming request data
-        $validator = Validator::make($request->all(), [
-            'message' => 'required|string',
-        ]);
+        $message = new MessageModel();
 
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()], 422);
+        if ($generate===true) {
+
+            // Generate a unique filename
+            $file = file_get_contents($request['message']['data'][0]['url']);
+            $fileName = 'ai_images/' . uniqid() . '.png';
+            Storage::disk('public')->put($fileName, $file);
+
+            $message->username = "AI";
+            $message->user_id = null;
+            $message->domain = $user->domain;
+            $message->image_path = 'storage/' . $fileName;
+            $message->message = $request['message']['data'][0]['revised_prompt'];
+            $message->type = "image";
+            $message->gender = "male";
+
+        } else {
+        
+            // Create new message
+            $prompt = $request['message'];
+            $filename = $request['filename'] ?? null; // filename should be sent from frontend after Word file is generated
+            $highlightedMessage = $prompt; // No syntax highlighting needed
+            $type = $request['type'] ?? 'text'; // Default to text if not specified
+            $message->username = "AI";
+            $message->user_id = null;
+            $message->domain = $user->domain;
+            $message->message = $highlightedMessage;
+            $message->gender = "male";
+            $message->file_path = 'storage/' . $filename; // Store the file path for the Word document
+            $message->download_link = url('/storage/' . $filename); // No image path for Word documents
+            $message->type = $type;
+
         }
 
-        $prompt = $request->input('message');
-
-        $highlightedMessage = $prompt;
-        
-        // Create new message
-        $message = new MessageModel();
-        $message->username = "AI";
-        $message->user_id = null;
-        $message->domain = $user->domain;
-        $message->message = $highlightedMessage;
         $message->save();
 
         // Trigger an event for the new message
-        event(new Message($user->name, $prompt));
+        event(new Message("AI", $prompt));
 
         return response()->json(['success' => 'Message saved successfully'], 200);
     }
@@ -362,6 +384,47 @@ class ChatController extends Controller
         event(new Message($user->name, $transcription));
 
         return response()->json(['success' => true, 'transcription' => $transcription]);
+    }
+
+    public function generateWordFile(Request $request)
+    {
+        $prompt = $request->input('prompt');
+        $aiResponse = $this->openAiService->askChatGPT($prompt);
+
+        // Generate unique filename
+        $filename = 'chatgpt_output_' . uniqid() . '.docx';
+        $path = storage_path("app/public/$filename");
+        $lines = explode("\n", $aiResponse);
+        // Create Word file
+        $phpWord = new PhpWord();
+        $section = $phpWord->addSection();
+
+        $titleStyle = ['bold' => true, 'size' => 16];
+        $headingStyle = ['bold' => true, 'size' => 14];
+        $normalStyle = ['size' => 12];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            if (preg_match('/^\*\*(.*?)\*\*$/', $line, $matches)) {
+                $section->addText($text, $headingStyle);
+            } elseif (!empty($line)) {
+                // Paragraph
+                $section->addText($line, $normalStyle);
+            } else {
+                // Line break
+                $section->addTextBreak();
+            }
+        }
+        // Save the Word file
+        IOFactory::createWriter($phpWord, 'Word2007')->save($path);
+
+        // Return filename to frontend
+        return response()->json([
+            'success' => true,
+            'filename' => $filename,
+            'message' => $aiResponse
+        ]);
     }
 
 }

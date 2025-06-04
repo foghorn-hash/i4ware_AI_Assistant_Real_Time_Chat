@@ -86,6 +86,7 @@ Route::group(['prefix' => 'chat', 'middleware' => 'CORS'], function ($router) {
 	Route::post('/save-message', [ChatController::class, 'saveMessageToDatabase']);
 	Route::post('/tts', [ChatController::class, 'synthesize']);
 	Route::post('/stt', [ChatController::class, 'transcribe']);
+	Route::post('/word/send', [ChatController::class, 'generateWordFile'])->name('chatgpt.generate.word');
 });
 
 Route::group(['prefix' => 'guest', 'middleware' => 'CORS'], function ($router) {
