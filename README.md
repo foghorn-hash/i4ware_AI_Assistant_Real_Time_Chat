@@ -146,7 +146,3 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 ## Development Environment
 
 We want to do Developent Environment with XAMPP including PHP 8.2 for Back-end Source Code with Laravel 9.+.
-
-## We are seeking Funding
-
-https://app.dealum.com/#/company/fundingroundprofile/16620/3y9psw17leyvmlnw1ma1lvte5easdawi
