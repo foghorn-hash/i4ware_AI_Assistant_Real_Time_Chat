@@ -15,6 +15,7 @@ import { Mic, Camera, CameraVideo, Upload } from 'react-bootstrap-icons';
 import { API_BASE_URL, ACCESS_TOKEN_NAME, ACCESS_USER_DATA, API_DEFAULT_LANGUAGE, API_PUSHER_KEY, API_PUSHER_CLUSTER } from "../../constants/apiConstants";
 import LocalizedStrings from 'react-localization';
 import { CloseButton } from 'react-bootstrap';
+import Offcanvas from 'react-bootstrap/Offcanvas';
 
 let strings = new LocalizedStrings({
   en: {
@@ -46,7 +47,22 @@ let strings = new LocalizedStrings({
     speech: "is recoding speech...",
     please_capture_image: "Please capture an image to upload",
     please_capture_video: "Please capture a video to upload",
-    please_write_message: "Please write a message to send"
+    please_write_message: "Please write a message to send",
+    generate_image: "Generate Image",
+    // ROHTO engineering form fields
+    rohto_role_label: "Role (who am I / who am I asking you to be?)",
+    rohto_role_placeholder: "E.g. 'Act as an AI assistant' or 'I am a lawyer...'",
+    rohto_problem_label: "Instructions (what are the instructions?)",
+    rohto_problem_placeholder: "Describe your instructions or question",
+    rohto_history_label: "Notes (what are your observations?)",
+    rohto_history_placeholder: "Break the task into clear steps to clarify the answer",
+    rohto_goal_label: "Goal (what do you want to achieve?)",
+    rohto_goal_placeholder: "Describe what you hope as a result",
+    rohto_expectation_label: "Relevance (what kind of answer do you expect?)",
+    rohto_expectation_placeholder: "Specify what you want it to address and what to leave out",
+    rohto_for_prompt: "My question is",
+    rohto_disable: "Disable ROHTO",
+    rohto_enable: "Enable ROHTO",
   },
   fi: {
     send: "Lähetä",
@@ -77,9 +93,24 @@ let strings = new LocalizedStrings({
     speech: "nauhoittaa puhetta...",
     please_capture_image: "Olehyvä ja kaappaa kuva ladataksesi",
     please_capture_video: "Olehyvä ja kaappaa video ladataksesi",
-    please_write_message: "Olehyvä ja kirjoita viesti lähettääksesi"
+    please_write_message: "Olehyvä ja kirjoita viesti lähettääksesi",
+    generate_image: "Luo kuva",
+    // ROHTO engineering form fields
+    rohto_role_label: "Rooli (kuka minä olen / ketä pyydän olemaan?)",
+    rohto_role_placeholder: "Esim. 'Toimi tekoälyavustajana' tai 'Olen lakimies...'",
+    rohto_problem_label: "Ohjeet (mitkä ovat ohjeet?)",
+    rohto_problem_placeholder: "Kuvaa ohjeesi tai kysymyksesi",
+    rohto_history_label: "Huomiot (mitkä ovat huomiosi?)",
+    rohto_history_placeholder: "Jaa tehtävä selkeisiin vaiheisiin vastauksen selkeyttämiseksi",
+    rohto_goal_label: "Tavoite (mitä haluat saavuttaa?)",
+    rohto_goal_placeholder: "Kerro mitä toivot tulokseksi",
+    rohto_expectation_label: "Osuvuus (millaista vastausta odotat?)",
+    rohto_expectation_placeholder: "Tarkenna mitä haluat sen käsittelevän ja jättävän pois",
+    rohto_for_prompt: "Kysymykseni on",
+    rohto_disable: "Poista ROHTO käytöstä",
+    rohto_enable: "Ota ROHTO käyttöön",
   },
-  se: {
+  sv: {
     send: "Skicka",
     typing: "skriver...",
     box: "Skriv meddelande...",
@@ -108,7 +139,22 @@ let strings = new LocalizedStrings({
     speech: "spela in tal...",
     please_capture_image: "Vänligen ta en bild för att ladda upp",
     please_capture_video: "Vänligen ta en video för att ladda upp",
-    please_write_message: "Vänligen skriv ett meddelande att skicka"
+    please_write_message: "Vänligen skriv ett meddelande att skicka",
+    generate_image: "Generera bild",
+    // ROHTO engineering form fields
+    rohto_role_label: "Roll (vem är jag / vem ber jag dig vara?)",
+    rohto_role_placeholder: "T.ex. 'Agera som AI-assistent' eller 'Jag är jurist...'",
+    rohto_problem_label: "Instruktioner (vilka är instruktionerna?)",
+    rohto_problem_placeholder: "Beskriv dina instruktioner eller din fråga",
+    rohto_history_label: "Anteckningar (vilka är dina observationer?)",
+    rohto_history_placeholder: "Dela upp uppgiften i tydliga steg för att förtydliga svaret",
+    rohto_goal_label: "Mål (vad vill du uppnå?)",
+    rohto_goal_placeholder: "Beskriv vad du hoppas som resultat",
+    rohto_expectation_label: "Relevans (vilket slags svar förväntar du dig?)",
+    rohto_expectation_placeholder: "Specificera vad du vill att det ska ta upp och vad som ska utelämnas",
+    rohto_for_prompt: "Min fråga är",
+    rohto_disable: "Inaktivera ROHTO",
+    rohto_enable: "Aktivera ROHTO",
   }
 });
 
@@ -122,6 +168,7 @@ const PusherChat = () => {
   const [speechIndicator, setSpeechIndicator] = useState('');
   const [aiTypingIndicator, setAiTypingIndicator] = useState('');
   const [isAiEnabled, setIsAiEnabled] = useState(false); // State to track AI checkbox
+  const [isGenerateEnabled, setIsGenerateEnabled] = useState(false); // State to track AI checkbox
   const typingTimeoutRef = useRef(null);
   const [showModal, setShowModal] = useState(false);
   const [showCaptureModal, setCaptureShowModal] = useState(false);
@@ -130,6 +177,7 @@ const PusherChat = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const webcamRef = useRef(null);
   const mediaRecorderRef = useRef(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [imageSrc, setImageSrc] = useState(null);
   const [imageVideoSrc, setImageVideoSrc] = useState(null);
   const [recordedChunks, setRecordedChunks] = useState([]);
@@ -140,6 +188,17 @@ const PusherChat = () => {
   const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState('');
   const [highlight, setHighlight] = useState({ button: false, textarea: false });
+  const [role, setRole] = useState('');
+  const [problem, setProblem] = useState('');
+  const [history, setHistory] = useState('');
+  const [goal, setGoal] = useState('');
+  const [expectation, setExpectation] = useState('');
+  const [showPromptOverlay, setShowPromptOverlay] = useState(false);
+  const [isRohtoEnabled, setIsRohtoEnabled] = useState(true); // Add this state
+
+  const enableRohto = () => setIsRohtoEnabled(true);
+  const disableRohto = () => setIsRohtoEnabled(false);
+  const toggleRohto = () => setIsRohtoEnabled((prev) => !prev);
 
   var query = window.location.search.substring(1);
   var urlParams = new URLSearchParams(query);
@@ -199,10 +258,16 @@ const PusherChat = () => {
     }
   };
 
-  const startRecording = () => {
-    mediaRecorderRef.current = new MediaRecorder(webcamRef.current.stream, {
-      mimeType: 'video/webm',
+  const startRecording = async () => {
+    // Request access to the webcam and microphone
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true,
     });
+
+
+    mediaRecorderRef.current = new MediaRecorder(stream);
+    
     mediaRecorderRef.current.addEventListener(
       'dataavailable',
       handleDataAvailable
@@ -358,25 +423,41 @@ const PusherChat = () => {
 
   const submitMessage = async (e) => {
     e.preventDefault();
-    await Axios.post(`${API_BASE_URL}/api/chat/messages`, { username, message }, {
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
-    });
-    setMessage('');
-    sendTypingStatus(false);
-    if (isAiEnabled) {
-      // Send "AI is thinking" message
-      setIsThinking(true);
-      await Axios.post(`${API_BASE_URL}/api/chat/thinking`, { username: "AI", isThinking: true }, {
+    try {
+      const optionSelected = isAiEnabled ? 'ask_from_ai' : isGenerateEnabled ? 'generate_image' : null;
+      await Axios.post(`${API_BASE_URL}/api/chat/messages`, { username, message }, {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
       });
-      generateResponse(); // Call generateResponse if isAiEnabled is true
-    } else {
-      fetchMessages(); // Fetch messages after sending a new message
+      setMessage('');
+      sendTypingStatus(false);
+      if (isAiEnabled) {
+        setIsThinking(true);
+        await Axios.post(`${API_BASE_URL}/api/chat/thinking`, { username: "AI", isThinking: true }, {
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
+        });
+        await generateResponse();
+      } else if (isGenerateEnabled) {
+        setIsThinking(true);
+        await Axios.post(`${API_BASE_URL}/api/chat/thinking`, { username: "AI", isThinking: true }, {
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
+        });
+        await generateImage();
+      } else {
+        fetchMessages(); // Fetch messages after sending user message
+      }
+    } catch (error) {
+      console.error('Failed to send message', error);
     }
   };
 
   const handleAiCheckboxChange = (e) => {
     setIsAiEnabled(e.target.checked);
+    if (e.target.checked) setIsGenerateEnabled(false); // Uncheck the other option
+  };
+  
+  const handleGenerateCheckboxChange = (e) => {
+    setIsGenerateEnabled(e.target.checked);
+    if (e.target.checked) setIsAiEnabled(false); // Uncheck the other option
   };
 
   const validateUpload = (image, message) => {
@@ -527,16 +608,20 @@ const PusherChat = () => {
       formData.append('message', message);
       formData.append('file', blob, 'captured-video.webm');
 
+      setUploadProgress(0);
+
       await Axios.post(API_BASE_URL + '/api/chat/upload-video', formData, {
         headers: {
           Authorization: 'Bearer ' + localStorage.getItem(ACCESS_TOKEN_NAME),
           'Content-Type': 'multipart/form-data',
-        }
+        },onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        },
       })
         .then(response => {
           console.log(response)
-          setvideoUploading(false);
-          handleCaptureVideoCloseModal(); 
+          setvideoUploading(false); 
           console.log("Video uploaded successfully");
           Swal.fire({
             icon: 'success',
@@ -544,6 +629,8 @@ const PusherChat = () => {
             text: strings.video_capture_successful,  
           }).then((result) => {
             if (result.isConfirmed) {
+              setUploadProgress(0);
+              //handleCaptureVideoCloseModal();
               fetchMessages();
             }
           });
@@ -556,61 +643,79 @@ const PusherChat = () => {
 };
 
 const generateResponse = async () => {
+  let fullPrompt;
+  if (isRohtoEnabled) {
+    fullPrompt = `
+      ${strings.rohto_role_label}: ${role}
+      ${strings.rohto_problem_label}: ${problem}
+      ${strings.rohto_history_label}: ${history}
+      ${strings.rohto_goal_label}: ${goal}
+      ${strings.rohto_expectation_label}: ${expectation}
+      ${strings.rohto_for_prompt}: ${message}
+    `.trim();
+  } else {
+    // If ROHTO is disabled, just send the message as the prompt
+    fullPrompt = message;
+  }
   try {
-    const token = localStorage.getItem(ACCESS_TOKEN_NAME);
-    const response = await Axios.post(
-      `${API_BASE_URL}/api/chat/generate-response`,
-      { prompt: message },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    console.log(response.data.response);
-
-    const messgeForHighliht = response.data.response;
-
-    const highlightedHTML = messgeForHighliht;
-
-    // Create the AI response message object with highlighted message
+    const response = await Axios.post(`${API_BASE_URL}/api/chat/generate-response`, { prompt: fullPrompt }, {
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
+    });
+    // 1. Generate the Word file in backend
+      const resp = await Axios.post(`${API_BASE_URL}/api/chat/word/send`, { prompt: fullPrompt, generate: false }, {
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
+    });
+    // Optionally, save the message to DB as before
+    const highHTML = resp.data.message;
     const aiResponseMessage = {
       username: 'AI',
-      message: highlightedHTML, // Use the highlighted response
+      generate: false,
+      message: highHTML,
       created_at: new Date().toISOString(),
+      filename: resp.data.filename || 'generated.docx', // Assuming backend returns a filename
+      type: 'docx',
     };
-
-    // Save the AI response message to the database
-    await saveMessageToDatabase(aiResponseMessage);
-
-    // Update the messages state
-    //setMessages((prevMessages) => [aiResponseMessage, ...prevMessages]);
-
-    // Handle AI response (display in chat, etc.)
+    await saveMessageToDatabase(aiResponseMessage, 'docx');
     setIsThinking(false);
     await Axios.post(`${API_BASE_URL}/api/chat/thinking`, { username: "AI", isThinking: false }, {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
     });
-
-    // Fetch updated messages
-    fetchMessages();
+    fetchMessages(); // Fetch messages after generating AI response
   } catch (error) {
     console.error('Error:', error);
+    setIsThinking(false);
+  }
+};
+
+const generateImage = async () => {
+  try {
+    const response = await Axios.post(`${API_BASE_URL}/api/chat/generate-image`, { prompt: message, generate: true }, {
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
+    });
+    const highlightedHTML = response.data.response;
+    const aiResponseMessage = {
+      username: 'AI',
+      generate: true,
+      message: highlightedHTML,
+      created_at: new Date().toISOString(),
+    };
+    await saveMessageToDatabase(aiResponseMessage);
+    setIsThinking(false);
+    await Axios.post(`${API_BASE_URL}/api/chat/thinking`, { username: "AI", isThinking: false }, {
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
+    });
+    fetchMessages(); // Fetch messages after generating AI response
+  } catch (error) {
+    console.error('Error:', error);
+    setIsThinking(false);
   }
 };
 
 const saveMessageToDatabase = async (message) => {
   try {
-    const token = localStorage.getItem(ACCESS_TOKEN_NAME);
     await Axios.post(`${API_BASE_URL}/api/chat/save-message`, message, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
     });
-    console.log('Message saved to database successfully:', message);
   } catch (error) {
     console.error('Error saving message to database:', error);
   }
@@ -619,6 +724,23 @@ const saveMessageToDatabase = async (message) => {
   return (
     <>
     <div className="chat-container">
+      <Button
+        className='rohto-button'
+        variant="outline-secondary"
+        style={{ float: 'right', marginBottom: 10 }}
+        onClick={() => setShowPromptOverlay(true)}
+        disabled={!isRohtoEnabled}
+      >
+        ROHTO
+      </Button>
+      <Form.Check
+        className='rohto-checkbox'
+        type="checkbox"
+        label={isRohtoEnabled ? strings.rohto_disable : strings.rohto_enable}
+        checked={isRohtoEnabled}
+        onChange={toggleRohto}
+        style={{ float: 'right', marginRight: 10, marginBottom: 10 }}
+      />
       <Button variant="primary" className='message-upload-button' onClick={handleShowModal}>
          <Upload /> {strings.upload_image_with_message}
       </Button>
@@ -631,19 +753,33 @@ const saveMessageToDatabase = async (message) => {
       <Button variant="primary" className='message-record-audio-button' onClick={handleRecordAudioShowModal}>
         <Mic /> {strings.speech_to_text}
       </Button>
-      <MessageList messages={messages} DefaultMaleImage={DefaultMaleImage} DefaultFemaleImage={DefaultFemaleImage} />
-      {typingIndicator && <div className="typing-indicator">{typingIndicator}</div>}
-      {speechIndicator && <div className="typing-indicator">{speechIndicator}</div>}
-      {isThinking && <div className="typing-indicator">{strings.aiTypingIndicator}</div>}
-
+      <div className='message-area'>
+        <MessageList messages={messages} DefaultMaleImage={DefaultMaleImage} DefaultFemaleImage={DefaultFemaleImage} />
+        <div className='active-list'>
+          {typingIndicator && <div className="typing-indicator">{typingIndicator}</div>}
+          {speechIndicator && <div className="typing-indicator">{speechIndicator}</div>}
+          {isThinking && <div className="typing-indicator">{strings.aiTypingIndicator}</div>}
+        </div>
+      </div>
       <Form className="message-form">
-      <Form.Group>
-        <Form.Check
-            type="checkbox"
+        <Form.Group>
+          <Form.Check // prettier-ignore
+            type="radio"
             className="message-ai"
+            name="ai-options"
             label={strings.ask_from_ai}
             checked={isAiEnabled}
             onChange={handleAiCheckboxChange}
+            value="ai"
+          />
+          <Form.Check // prettier-ignore
+            type="radio"
+            className="generate-image-ai"
+            name="ai-options"
+            label={strings.generate_image}
+            checked={isGenerateEnabled}
+            onChange={handleGenerateCheckboxChange}
+            value="generate-image"
           />
       </Form.Group>
       <Form.Group style={{ position: 'relative' }}>
@@ -662,6 +798,75 @@ const saveMessageToDatabase = async (message) => {
         <Button variant='primary' onClick={submitMessage}>{strings.send}</Button>
       </Form>
     </div>
+    {/* ROHTO Prompt Overlay */}
+    <Offcanvas
+      show={showPromptOverlay}
+      onHide={() => setShowPromptOverlay(false)}
+      placement="end"
+    >
+      <Offcanvas.Header closeButton>
+        <Offcanvas.Title>ROHTO AI Prompt</Offcanvas.Title>
+      </Offcanvas.Header>
+      <Offcanvas.Body>
+        <Form>
+          <Form.Group className="mb-3">
+            <Form.Label>{strings.rohto_role_label}</Form.Label>
+            <Form.Control
+              className='prompt-textarea'
+              as="textarea"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              placeholder={strings.rohto_role_placeholder}
+              disabled={!isRohtoEnabled}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>{strings.rohto_problem_label}</Form.Label>
+            <Form.Control
+              className='prompt-textarea'
+              as="textarea"
+              value={problem}
+              onChange={(e) => setProblem(e.target.value)}
+              placeholder={strings.rohto_problem_placeholder}
+              disabled={!isRohtoEnabled}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>{strings.rohto_history_label}</Form.Label>
+            <Form.Control
+              className='prompt-textarea'
+              as="textarea"
+              value={history}
+              onChange={(e) => setHistory(e.target.value)}
+              placeholder={strings.rohto_history_placeholder}
+              disabled={!isRohtoEnabled}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>{strings.rohto_goal_label}</Form.Label>
+            <Form.Control
+              className='prompt-textarea'
+              as="textarea"
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
+              placeholder={strings.rohto_goal_placeholder}
+              disabled={!isRohtoEnabled}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>{strings.rohto_expectation_label}</Form.Label>
+            <Form.Control
+              className='prompt-textarea'
+              as="textarea"
+              value={expectation}
+              onChange={(e) => setExpectation(e.target.value)}
+              placeholder={strings.rohto_expectation_placeholder}
+              disabled={!isRohtoEnabled}
+            />
+          </Form.Group>
+        </Form>
+      </Offcanvas.Body>
+    </Offcanvas>
     <Modal show={showModal} onHide={handleCloseModal}>
       <Modal.Header className='message-upload-modal' closeButton>
         <Modal.Title className='massage-upload-title'>{strings.upload_image_with_message}</Modal.Title>
@@ -772,6 +977,10 @@ const saveMessageToDatabase = async (message) => {
           {error && <div className='error-message' dangerouslySetInnerHTML={{ __html: error }} />}
           <button className='message-upload-button' onClick={uploadVideo}>{strings.upload}</button>
         </form>
+        <div style={{ marginTop: "10px" }}>
+          <progress value={uploadProgress} max="100"></progress>
+          <p>Uploading: {uploadProgress}%</p>
+        </div>
       </Modal.Body>
       <Modal.Footer className='message-upload-modal'>
         <Button variant="secondary" onClick={handleCaptureVideoCloseModal}>

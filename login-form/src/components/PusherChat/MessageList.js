@@ -2,9 +2,12 @@ import React, { useEffect, useState, useRef } from 'react';
 import { API_BASE_URL, ACCESS_TOKEN_NAME, API_DEFAULT_LANGUAGE } from "../../constants/apiConstants";
 import Axios from 'axios';
 import HighlightedResponse from './HighlightedResponse';
-import { PlayFill, StopFill } from 'react-bootstrap-icons';
+import { PlayFill, StopFill, Download } from 'react-bootstrap-icons';
 import CustomModal from './CustomModal'; // Import the custom modal component
 import LocalizedStrings from 'react-localization';
+
+let currentDate;
+let prevDate;
 
 let strings = new LocalizedStrings({
   en: {
@@ -17,7 +20,7 @@ let strings = new LocalizedStrings({
     generateSpeech: "Luo puhe",
     stopSpeech: "Pysäytä puhe"
   },
-  se: {
+  sv: {
     your_browser_not_support_video_tag: "Din webbläsare stöder inte videomarkeringen.",
     generateSpeech: "Generera tal",
     stopSpeech: "Stoppa tal"
@@ -172,16 +175,46 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
     }
   };
 
+
+  const checkDate = (currentDate) => {
+  if(currentDate !== prevDate){
+    prevDate = currentDate
+    return currentDate
+  }
+  else{
+    return null
+  }
+
+
+  }
   return (
     <div className="messages-list">
       {[...processedMessages].reverse().map((msg, index) => (
+        
         <div key={index} className="message">
+
+          <div className='date-line'>{checkDate(new Date(msg.formatted_created_at).toLocaleDateString())}</div>
+
           <div className='message-date'>
+         
             <strong>{msg.username}: </strong>
-            <i>{msg.formatted_created_at}</i>
+            <i>{new Date(msg.formatted_created_at).toLocaleTimeString()}</i>
+            
+
             <button className="message-TTS" onClick={() => handleToggleSpeech(msg.message, msg.gender, msg.id)}>
               {currentMessageId === msg.id ? <StopFill /> : <PlayFill />}
             </button>
+            {msg.download_link && (
+              <a
+                href={msg.download_link}
+                className="message-download-btn"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ marginLeft: '10px' }}
+              >
+                <Download />
+              </a>
+            )}
           </div>
           <div className='massage-container'>
             <img src={msg.profilePicUrl || msg.defaultImg} className='message-avatar' alt={`Profile of ${msg.username}`} />
