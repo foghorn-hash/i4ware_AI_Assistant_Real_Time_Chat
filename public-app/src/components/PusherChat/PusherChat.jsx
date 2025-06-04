@@ -471,23 +471,6 @@ const PusherChat = () => {
   return (
     <>
     <div className="chat-container">
-      <Button
-        className='rohto-button'
-        variant="outline-secondary"
-        style={{ float: 'right', marginBottom: 10 }}
-        onClick={() => setShowPromptOverlay(true)}
-        disabled={!isRohtoEnabled}
-      >
-        ROHTO
-      </Button>
-      <Form.Check
-        className='rohto-checkbox'
-        type="checkbox"
-        label={isRohtoEnabled ? strings.rohto_disable : strings.rohto_enable}
-        checked={isRohtoEnabled}
-        onChange={toggleRohto}
-        style={{ float: 'right', marginRight: 10, marginBottom: 10 }}
-      />
       <Button variant="primary" className='message-record-audio-button' onClick={handleRecordAudioShowModal}>
         <Mic />
       </Button>
@@ -535,6 +518,23 @@ const PusherChat = () => {
         <button className="send-button" onClick={submitMessage}>{strings.send}</button>
       </form>
     </div>
+    <Button
+        className='rohto-button'
+        variant="outline-secondary"
+        style={{ float: 'right', marginBottom: 10 }}
+        onClick={() => setShowPromptOverlay(true)}
+        disabled={!isRohtoEnabled}
+      >
+        ROHTO
+      </Button>
+      <Form.Check
+        className='rohto-checkbox'
+        type="checkbox"
+        label={isRohtoEnabled ? strings.rohto_disable : strings.rohto_enable}
+        checked={isRohtoEnabled}
+        onChange={toggleRohto}
+        style={{ float: 'right', marginRight: 10, marginBottom: 10, color: 'white' }}
+      />
     {/* ROHTO Prompt Overlay */}
     <Offcanvas
       show={showPromptOverlay}

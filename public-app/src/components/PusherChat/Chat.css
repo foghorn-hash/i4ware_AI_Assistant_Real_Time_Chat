@@ -42,8 +42,13 @@
 	width: 100%;
 }
 
+.rohto-button {
+	margin-top: 20px;
+	margin-right: 20px;
+}
+
 .rohto-checkbox {
-	margin-top: 7px;
+	margin-top: 27px;
     margin-right: 10px;
 }
 
