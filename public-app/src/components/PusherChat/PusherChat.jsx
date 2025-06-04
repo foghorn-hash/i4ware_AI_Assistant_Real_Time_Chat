@@ -11,6 +11,7 @@ import MessageList from './MessageList';
 import AudioRecorder from '../AudioRecorder/AudioRecorder';
 import { Mic } from 'react-bootstrap-icons';
 import Form from 'react-bootstrap/Form';
+import Offcanvas from 'react-bootstrap/Offcanvas';
 import { API_BASE_URL, API_DOMAIN, API_DEFAULT_LANGUAGE, API_PUSHER_KEY, API_PUSHER_CLUSTER } from "../../constants/apiConstants";
 import LocalizedStrings from 'react-localization';
 
@@ -45,6 +46,20 @@ let strings = new LocalizedStrings({
     generate_image: "Generate Image",
     generate_word: "Generate Word Document",
     generate_ppt: "Generate PowerPoint Presentation",
+    // ROHTO engineering form fields
+    rohto_role_label: "Role (who am I / who am I asking you to be?)",
+    rohto_role_placeholder: "E.g. 'Act as an AI assistant' or 'I am a lawyer...'",
+    rohto_problem_label: "Problem (what is the problem?)",
+    rohto_problem_placeholder: "Describe your problem or question",
+    rohto_history_label: "History (what is the background of the situation?)",
+    rohto_history_placeholder: "Provide background information, e.g. what you have already tried",
+    rohto_goal_label: "Goal (what do you want to achieve?)",
+    rohto_goal_placeholder: "Describe what you hope to achieve",
+    rohto_expectation_label: "Expectation (what kind of answer do you expect?)",
+    rohto_expectation_placeholder: "Short, long, step-by-step, technical, etc.",
+    rohto_for_prompt: "My question is",
+    rohto_disable: "Disable ROHTO",
+    rohto_enable: "Enable ROHTO",
   },
   fi: {
     send: "Lähetä",
@@ -76,6 +91,20 @@ let strings = new LocalizedStrings({
     generate_image: "Luo kuva",
     generate_word: "Luo Word-asiakirja",
     generate_ppt: "Luo PowerPoint-esitys",
+    // ROHTO engineering form fields
+    rohto_role_label: "Rooli (kuka minä olen / ketä pyydän olemaan?)",
+    rohto_role_placeholder: "Esim. 'Toimi tekoälyavustajana' tai 'Olen lakimies...'",
+    rohto_problem_label: "Ongelma (mikä on ongelma?)",
+    rohto_problem_placeholder: "Kuvaa ongelmasi tai kysymyksesi",
+    rohto_history_label: "Historia (mikä tausta tilanteella on?)",
+    rohto_history_placeholder: "Anna taustatietoa, esim. mitä olet jo kokeillut",
+    rohto_goal_label: "Tavoite (mitä haluat saavuttaa?)",
+    rohto_goal_placeholder: "Kerro mitä toivot tulokseksi",
+    rohto_expectation_label: "Odotus (millaista vastausta odotat?)",
+    rohto_expectation_placeholder: "Lyhyt, pitkä, vaiheittainen, tekninen jne.",
+    rohto_for_prompt: "Kysymykseni on",
+    rohto_disable: "Poista ROHTO käytöstä",
+    rohto_enable: "Ota ROHTO käyttöön",
   },
   se: {
     send: "Skicka",
@@ -107,6 +136,20 @@ let strings = new LocalizedStrings({
     generate_image: "Generera bild",
     generate_word: "Generera Word-dokument",
     generate_ppt: "Generera PowerPoint-presentation",
+    // ROHTO engineering form fields
+    rohto_role_label: "Roll (vem är jag / vem ber jag dig vara?)",
+    rohto_role_placeholder: "T.ex. 'Agera som AI-assistent' eller 'Jag är jurist...'",
+    rohto_problem_label: "Problem (vad är problemet?)",
+    rohto_problem_placeholder: "Beskriv ditt problem eller din fråga",
+    rohto_history_label: "Historia (vad är bakgrunden till situationen?)",
+    rohto_history_placeholder: "Ge bakgrundsinformation, t.ex. vad du redan har försökt",
+    rohto_goal_label: "Mål (vad vill du uppnå?)",
+    rohto_goal_placeholder: "Beskriv vad du hoppas uppnå",
+    rohto_expectation_label: "Förväntning (vilken typ av svar förväntar du dig?)",
+    rohto_expectation_placeholder: "Kort, långt, steg-för-steg, tekniskt, etc.",
+    rohto_for_prompt: "Min fråga är",
+    rohto_disable: "Inaktivera ROHTO",
+    rohto_enable: "Aktivera ROHTO",
   }
 });
 
@@ -132,6 +175,17 @@ const PusherChat = () => {
   const [videoUploading, setvideoUploading] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
   const [isThinking, setIsThinking] = useState(false);
+  const [role, setRole] = useState('');
+  const [problem, setProblem] = useState('');
+  const [history, setHistory] = useState('');
+  const [goal, setGoal] = useState('');
+  const [expectation, setExpectation] = useState('');
+  const [showPromptOverlay, setShowPromptOverlay] = useState(false);
+  const [isRohtoEnabled, setIsRohtoEnabled] = useState(true); // Add this state
+
+  const enableRohto = () => setIsRohtoEnabled(true);
+  const disableRohto = () => setIsRohtoEnabled(false);
+  const toggleRohto = () => setIsRohtoEnabled((prev) => !prev);
 
   const handleRecordAudioShowModal = () => setRecordAudioShowModal(true);
   const handleRecordAudioCloseModal = () => setRecordAudioShowModal(false);
@@ -219,6 +273,8 @@ const PusherChat = () => {
 
   const submitMessage = async (e) => {
     e.preventDefault();
+    await Axios.post(`${API_BASE_URL}/api/guest/messages`, { username, message });
+    setMessage('');
     try {
       sendTypingStatus(false);
       if (isAiEnabled) {
@@ -281,8 +337,22 @@ const PusherChat = () => {
   };
 
   const generateResponse = async () => {
+    let fullPrompt;
+    if (isRohtoEnabled) {
+      fullPrompt = `
+        ${strings.rohto_role_label}: ${role}
+        ${strings.rohto_problem_label}: ${problem}
+        ${strings.rohto_history_label}: ${history}
+        ${strings.rohto_goal_label}: ${goal}
+        ${strings.rohto_expectation_label}: ${expectation}
+        ${strings.rohto_for_prompt}: ${message}
+      `.trim();
+    } else {
+      // If ROHTO is disabled, just send the message as the prompt
+      fullPrompt = message;
+    }
     try {
-      const response = await Axios.post(`${API_BASE_URL}/api/guest/generate-response`, { prompt: message });
+      const response = await Axios.post(`${API_BASE_URL}/api/guest/generate-response`, { prompt: fullPrompt });
       const highlightedHTML = response.data.response;
       const aiResponseMessage = {
         username: 'AI',
@@ -321,12 +391,26 @@ const PusherChat = () => {
   };
 
   const generateAndDownloadWord = async () => {
+    let fullPrompt;
+    if (isRohtoEnabled) {
+      fullPrompt = `
+        ${strings.rohto_role_label}: ${role}
+        ${strings.rohto_problem_label}: ${problem}
+        ${strings.rohto_history_label}: ${history}
+        ${strings.rohto_goal_label}: ${goal}
+        ${strings.rohto_expectation_label}: ${expectation}
+        ${strings.rohto_for_prompt}: ${message}
+      `.trim();
+    } else {
+      // If ROHTO is disabled, just send the message as the prompt
+      fullPrompt = message;
+    }
     try {
-      await Axios.post(`${API_BASE_URL}/api/guest/messages`, { username, message });
+      await Axios.post(`${API_BASE_URL}/api/guest/messages`, { username, fullPrompt });
       fetchMessages(); // Fetch messages after sending user message
       setIsThinking(true);
       // 1. Generate the Word file in backend
-      const response = await Axios.post(`${API_BASE_URL}/api/chatgpt/word/send`, { prompt: message, generate: false });
+      const response = await Axios.post(`${API_BASE_URL}/api/chatgpt/word/send`, { prompt: fullPrompt, generate: false });
       // Optionally, save the message to DB as before
       const highlightedHTML = response.data.message;
       const aiResponseMessage = {
@@ -387,6 +471,23 @@ const PusherChat = () => {
   return (
     <>
     <div className="chat-container">
+      <Button
+        className='rohto-button'
+        variant="outline-secondary"
+        style={{ float: 'right', marginBottom: 10 }}
+        onClick={() => setShowPromptOverlay(true)}
+        disabled={!isRohtoEnabled}
+      >
+        ROHTO
+      </Button>
+      <Form.Check
+        className='rohto-checkbox'
+        type="checkbox"
+        label={isRohtoEnabled ? strings.rohto_disable : strings.rohto_enable}
+        checked={isRohtoEnabled}
+        onChange={toggleRohto}
+        style={{ float: 'right', marginRight: 10, marginBottom: 10 }}
+      />
       <Button variant="primary" className='message-record-audio-button' onClick={handleRecordAudioShowModal}>
         <Mic />
       </Button>
@@ -434,6 +535,75 @@ const PusherChat = () => {
         <button className="send-button" onClick={submitMessage}>{strings.send}</button>
       </form>
     </div>
+    {/* ROHTO Prompt Overlay */}
+    <Offcanvas
+      show={showPromptOverlay}
+      onHide={() => setShowPromptOverlay(false)}
+      placement="end"
+    >
+      <Offcanvas.Header closeButton>
+        <Offcanvas.Title>ROHTO AI Prompt</Offcanvas.Title>
+      </Offcanvas.Header>
+      <Offcanvas.Body>
+        <Form>
+          <Form.Group className="mb-3">
+            <Form.Label>{strings.rohto_role_label}</Form.Label>
+            <Form.Control
+              className='prompt-textarea'
+              as="textarea"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              placeholder={strings.rohto_role_placeholder}
+              disabled={!isRohtoEnabled}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>{strings.rohto_problem_label}</Form.Label>
+            <Form.Control
+              className='prompt-textarea'
+              as="textarea"
+              value={problem}
+              onChange={(e) => setProblem(e.target.value)}
+              placeholder={strings.rohto_problem_placeholder}
+              disabled={!isRohtoEnabled}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>{strings.rohto_history_label}</Form.Label>
+            <Form.Control
+              className='prompt-textarea'
+              as="textarea"
+              value={history}
+              onChange={(e) => setHistory(e.target.value)}
+              placeholder={strings.rohto_history_placeholder}
+              disabled={!isRohtoEnabled}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>{strings.rohto_goal_label}</Form.Label>
+            <Form.Control
+              className='prompt-textarea'
+              as="textarea"
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
+              placeholder={strings.rohto_goal_placeholder}
+              disabled={!isRohtoEnabled}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>{strings.rohto_expectation_label}</Form.Label>
+            <Form.Control
+              className='prompt-textarea'
+              as="textarea"
+              value={expectation}
+              onChange={(e) => setExpectation(e.target.value)}
+              placeholder={strings.rohto_expectation_placeholder}
+              disabled={!isRohtoEnabled}
+            />
+          </Form.Group>
+        </Form>
+      </Offcanvas.Body>
+    </Offcanvas>
     <Modal show={showRecordAudioShowModal} onHide={handleRecordAudioCloseModal}>
       <Modal.Header className='message-upload-modal' closeButton>
         <Modal.Title className='massage-upload-title'>{strings.speech_to_text}</Modal.Title>

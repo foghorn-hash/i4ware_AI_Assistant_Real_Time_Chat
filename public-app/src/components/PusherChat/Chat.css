@@ -38,6 +38,15 @@
 	color: #f2f2f2;
 }
 
+.prompt-textarea {
+	width: 100%;
+}
+
+.rohto-checkbox {
+	margin-top: 7px;
+    margin-right: 10px;
+}
+
 .message-file-button {
 	padding: 10px;
 	border-radius: 8px;
