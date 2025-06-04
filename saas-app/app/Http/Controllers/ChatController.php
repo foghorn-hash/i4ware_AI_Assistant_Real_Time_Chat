@@ -215,12 +215,20 @@ class ChatController extends Controller
 
     public function generateResponse(Request $request)
     {
-        $user = Auth::user();
 
         $prompt = $request->input('prompt');
         $response = $this->openAiService->generateText($prompt);
 
         return response()->json(['response' => $response]);
+    }
+
+    public function generateImage(Request $request) {
+        
+        $prompt = $request->input('prompt');
+        $response = $this->openAiService->generateImage($prompt);
+
+        return response()->json(['response' => $response]);
+
     }
 
     public function saveMessageToDatabase(Request $request)
