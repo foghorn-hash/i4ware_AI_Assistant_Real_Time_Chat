@@ -10,6 +10,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use App\Http\Controllers\Controller;
+use App\Models\InvoicePaymentTerm;
 use Illuminate\Support\Facades\Hash;
 use Auth;
 use App\Models\User;
@@ -18,11 +19,13 @@ use Validator;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Mail;
 use Illuminate\Support\Facades\View;
 use Storage;
+use App\Models\Settings;
 
 class AuthController extends Controller
 {
@@ -54,6 +57,38 @@ class AuthController extends Controller
 	 */
 	public function submitForgetPasswordForm(Request $request)
 	{
+
+		$show_captcha = DB::table('settings')->select('setting_value')->where('setting_key', '=', 'show_captcha')->where('domain', '=', env('APP_DOMAIN_ADMIN'))->first();
+
+		//echo $show_captcha->setting_value;
+
+		if ($show_captcha->setting_value == '1') {
+
+			if (!$request->has('recaptcha')) {
+				return response()->json([
+					'success' => false,
+					'error' => 'Captcha verification failed (missing response)'
+				], 200);
+			}
+
+			$response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+				'secret'   => env('APP_RECAPTCHA_SECRET_KEY'),
+				'response' => $request->input('recaptcha'),
+				'remoteip' => $request->ip(),
+			]);
+
+			$result = $response->json();
+
+			if (!$result['success']) {
+				return response()->json([
+					'success' => false,
+					'error' => 'Captcha verification failed'
+				], 200);
+				abort(422, 'Captcha verification failed');
+			}
+
+		}
+
 		$request->validate([
 			'email' => 'required|email|exists:users',
 		]);
@@ -70,7 +105,11 @@ class AuthController extends Controller
 			$message->to($request->email);
 			$message->subject('Reset Password');
 		});
-		return back()->with('message', 'We have e-mailed your password reset link!');
+
+		return response()->json([
+			'success' => true,
+			'data' => 'We have e-mailed your password reset link!'
+		], 200);
 	}
 
 	/**
@@ -80,6 +119,37 @@ class AuthController extends Controller
 	 */
 	public function submitResetPasswordForm(Request $request)
 	{
+
+		$show_captcha = DB::table('settings')->select('setting_value')->where('setting_key', '=', 'show_captcha')->where('domain', '=', env('APP_DOMAIN_ADMIN'))->first();
+
+		//echo $show_captcha->setting_value;
+
+		if ($show_captcha->setting_value == '1') {
+
+			if (!$request->has('recaptcha')) {
+				return response()->json([
+					'success' => false,
+					'error' => 'Captcha verification failed (missing response)'
+				], 200);
+			}
+
+			$response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+				'secret'   => env('APP_RECAPTCHA_SECRET_KEY'),
+				'response' => $request->input('recaptcha'),
+				'remoteip' => $request->ip(),
+			]);
+
+			$result = $response->json();
+
+			if (!$result['success']) {
+				return response()->json([
+					'success' => false,
+					'error' => 'Captcha verification failed'
+				], 200);
+				abort(422, 'Captcha verification failed');
+			}
+
+		}
 
 		$updatePassword = DB::table('password_resets')
 			->where([
@@ -93,6 +163,7 @@ class AuthController extends Controller
 				'success' => false,
 				'data' => 'Invalid token!'
 			], 200);
+			abort(422, "Invalid token!");
 		}
 
 		//$password = Str::random(64);
@@ -103,7 +174,7 @@ class AuthController extends Controller
 		DB::table('password_resets')->where(['email' => $request->email])->delete();
 
 		return response()->json([
-			'success' => false,
+			'success' => true,
 			'data' => 'Password is now reseted!'
 		], 200);
 
@@ -212,9 +283,37 @@ class AuthController extends Controller
 	public function register(Request $request)
 	{
 
-		$disable_registeration_from_others = DB::table('settings')->select('setting_value')->where('setting_key', '=', 'disable_registeration_from_others')->first();
+		$disable_registeration_from_others = DB::table('settings')->select('setting_value')->where('setting_key', '=', 'disable_registeration_from_others')->where('domain', '=', env('APP_DOMAIN_ADMIN'))->first();
+		$show_captcha = DB::table('settings')->select('setting_value')->where('setting_key', '=', 'show_captcha')->where('domain', '=', env('APP_DOMAIN_ADMIN'))->first();
 
 		//echo $disable_registeration_from_others->setting_value;
+
+		if ($show_captcha->setting_value == '1') {
+
+			if (!$request->has('recaptcha')) {
+				return response()->json([
+					'success' => false,
+					'error' => 'Captcha verification failed (missing response)'
+				], 200);
+			}
+
+			$response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+				'secret'   => env('APP_RECAPTCHA_SECRET_KEY'),
+				'response' => $request->input('recaptcha'),
+				'remoteip' => $request->ip(),
+			]);
+
+			$result = $response->json();
+
+			if (!$result['success']) {
+				return response()->json([
+					'success' => false,
+					'error' => 'Captcha verification failed'
+				], 200);
+				abort(422, 'Captcha verification failed');
+			}
+
+		}
 
 		if ($disable_registeration_from_others->setting_value == '1') {
 			$validator = Validator::make($request->all(), [
@@ -226,8 +325,13 @@ class AuthController extends Controller
 			]);
 		} else {
 			$validator = Validator::make($request->all(), [
-				'email' => 'required|string|unique:users|email',
-				'name' => 'required|string',
+				'email'          => 'required|string|unique:users|email',
+				'name'           => 'required|string|max:32',
+				'company_name'   => 'required|string|max:255',
+				'business_id'    => 'required|string|max:32',
+				'address_line_1' => 'required|string|max:255',
+				'city'           => 'required|string|max:255',
+				'zip'            => 'required|string|max:255',
 				'gender' => 'required|string',
 				'domain' => 'required|string|unique:domains,domain|regex:/^(?:[-A-Za-z0-9]+\.)+[A-Za-z]{2,6}$/',
 				'password' => 'required|min:8',
@@ -251,10 +355,6 @@ class AuthController extends Controller
 				DB::table('users')->insert([
 					['name' => $request->name, 'gender' => $request->gender, 'email' => $request->email, 'password' => Hash::make($request->password), 'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s'), 'domain' => env('APP_DOMAIN_ADMIN'), 'role' => 'user', 'role_id' => 2]
 				]);
-
-				//echo "TEST!";
-
-				//DB::commit();
 
 				try {
 
@@ -285,8 +385,6 @@ class AuthController extends Controller
 						->select('verified')
 						->where('user_id', $id)
 						->first()->verified;
-
-						//echo $is_verified;
 
 						if ($is_verified == 0) {
 
@@ -333,30 +431,190 @@ class AuthController extends Controller
 			
 			DB::beginTransaction();
 
+			$permissions = [
+				"domain.view",
+				"domain.edit",
+				"domain.add",
+				"domain.actions",
+				"users.view",
+				"users.statusChange",
+				"users.changePassword",
+				"users.changeRole",
+				"users.addUser",
+				"users.verifyUser",    
+				"roles.view",
+				"roles.edit",
+				"roles.add",
+				"roles.actions",
+				"settings.manage",
+			];
+
 			try {
 
 				DB::table('domains')->insert([
 					[
 						'domain' => $request->domain,
 						'valid_before_at' => date('Y-m-d H:i:s', strtotime("+30 day")),
-						'vat_id' => "-",
+						'mobile_no' => $request->mobile_no ?? "",
+						'company_name' => $request->company_name ?? "",
+						'vat_id' => $request->vat_id ?? "",
+						'business_id' => $request->busines_id ?? "",
 						'technical_contact_email' => $request->email,
 						'billing_contact_email' => $request->email,
-						'company_name' => "",
-						'address_line_1' => "",
-						'address_line_2' => "",
-						'zip' => "",
-						'city' => "",
-						'country' => "",
+						'company_name' => $request->company_name ?? "",
+						'address_line_1' => $request->address_line_1 ?? "",
+						'address_line_2' => $request->address_line_2 ?? "",
+						'zip' => $request->zip ?? "",
+						'city' => $request->city ?? "",
+						'country' => $request->country ?? "",
 						'is_admin' => false,
 						'type' => "trial",
 						'created_at' => date('Y-m-d H:i:s'),
 						'updated_at' => date('Y-m-d H:i:s'),
+
 					]
 				]);
 
+				$role = Role::updateOrCreate([
+					"name" => "admin",
+					"isActive" => true,
+					"domain" => $request->domain,
+				]);
+
+				for ($i=0; $i < count($permissions); $i++) {
+                
+					$permission = Permission::updateOrCreate([
+						"permission_name" => $permissions[$i],
+						"desc" => $permissions[$i] . " desc"
+					]);
+					
+					if ($permissions[$i] == "domain.view") {
+						RolePermissions::updateOrInsert([
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+						],[
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+							"created_at" => now(),
+                            "updated_at" => now(),
+						]);
+					} else if ($permissions[$i] == "domain.edit") {
+						RolePermissions::updateOrInsert([
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+						],[
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+							"created_at" => now(),
+                            "updated_at" => now(),
+						]);
+					} else if ($permissions[$i] == "users.view") {
+						RolePermissions::updateOrInsert([
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+						],[
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+							"created_at" => now(),
+                            "updated_at" => now(),
+						]);
+					} else if ($permissions[$i] == "users.statusChange") {
+						RolePermissions::updateOrInsert([
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+						],[
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+							"created_at" => now(),
+                            "updated_at" => now(),
+						]);
+					} else if ($permissions[$i] == "users.changePassword") {
+						RolePermissions::updateOrInsert([
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+						],[
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+							"created_at" => now(),
+                            "updated_at" => now(),
+						]);
+					} else if ($permissions[$i] == "users.changeRole") {
+						RolePermissions::updateOrInsert([
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+						],[
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+							"created_at" => now(),
+                            "updated_at" => now(),
+						]);
+					} else if ($permissions[$i] == "users.addUser") {
+						RolePermissions::updateOrInsert([
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+						],[
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+							"created_at" => now(),
+                            "updated_at" => now(),
+						]);
+					} else if ($permissions[$i] == "roles.view") {
+						RolePermissions::updateOrInsert([
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+						],[
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+							"created_at" => now(),
+                            "updated_at" => now(),
+						]);
+					} else if ($permissions[$i] == "roles.edit") {
+						RolePermissions::updateOrInsert([
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+						],[
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+							"created_at" => now(),
+                            "updated_at" => now(),
+						]);
+					} else if ($permissions[$i] == "roles.add") {
+						RolePermissions::updateOrInsert([
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+						],[
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+							"created_at" => now(),
+                            "updated_at" => now(),
+						]);
+					} else if ($permissions[$i] == "roles.actions") {
+						RolePermissions::updateOrInsert([
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+						],[
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+							"created_at" => now(),
+                            "updated_at" => now(),
+						]);
+					} else if ($permissions[$i] == "settings.manage") {
+						RolePermissions::updateOrInsert([
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+						],[
+							"role_id" => $role->id,
+							"permission_id" => $permission->id,
+							"created_at" => now(),
+                            "updated_at" => now(),
+						]);
+					} else {
+
+					}
+				}
+
 				DB::table('users')->insert([
-					['name' => $request->name, 'gender' => $request->gender, 'email' => $request->email, 'password' => Hash::make($request->password), 'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s'), 'domain' => $request->domain, 'role' => 'user', 'role_id' => 2]
+					['name' => $request->name, 'gender' => $request->gender, 'email' => $request->email, 'password' => Hash::make($request->password), 'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s'), 'domain' => $request->domain, 'role' => 'user', 'role_id' => $role->id]
 				]);
 
 				$role = Role::updateOrCreate([
@@ -430,7 +688,28 @@ class AuthController extends Controller
 	 */
 	public function verifyAccount($token)
 	{
-		return redirect(env('APP_UI_URL') . '/#/verifyemail?token=' . $token);
+		$verifyUser = UserVerify::where('token', $token)->first();
+		$status = 'error';
+		$message = 'Sorry your email cannot be identified.';
+		
+		if (!is_null($verifyUser)) {
+			if ($verifyUser->verified === 0) {
+				$message = "Your e-mail is verified. You can now login.";
+				$status = 'success';
+			}
+			if ($verifyUser->verified === 1) {
+				$message = "Your e-mail is already verified. You can now login.";
+				$status = 'already-verified';
+			}
+			UserVerify::where('token', $token)->update([
+				'verified' => 1
+			]);
+			User::where('id', $verifyUser->user_id)->update([
+				'email_verified_at' => now()
+			]);
+		}
+		
+		return redirect(env('APP_UI_URL') . '/#/verifyemail?status=' . $status . '&message=' . $message);
 	}
 
 

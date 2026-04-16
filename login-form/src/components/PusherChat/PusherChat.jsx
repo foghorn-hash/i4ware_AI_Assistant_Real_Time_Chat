@@ -1,174 +1,42 @@
-import React, { useEffect, useState, useRef } from 'react';
-import Pusher from 'pusher-js';
-import Axios from 'axios';
-import './Chat.css';
+import React, { useEffect, useState, useRef } from "react";
+import Pusher from "pusher-js";
+import Axios from "axios";
+import "./Chat.css";
 import DefaultMaleImage from "../../male-default-profile-picture.png";
 import DefaultFemaleImage from "../../female-default-profile-picture.png";
-import Modal from 'react-bootstrap/Modal';
-import Button from 'react-bootstrap/Button';
-import Form from 'react-bootstrap/Form';
-import Webcam from 'react-webcam';
-import Swal from 'sweetalert2';
-import MessageList from './MessageList';
-import AudioRecorder from '../AudioRecorder/AudioRecorder';
-import { Mic, Camera, CameraVideo, Upload } from 'react-bootstrap-icons';
-import { API_BASE_URL, ACCESS_TOKEN_NAME, ACCESS_USER_DATA, API_DEFAULT_LANGUAGE, API_PUSHER_KEY, API_PUSHER_CLUSTER } from "../../constants/apiConstants";
-import LocalizedStrings from 'react-localization';
-import { CloseButton } from 'react-bootstrap';
-import Offcanvas from 'react-bootstrap/Offcanvas';
-
-let strings = new LocalizedStrings({
-  en: {
-    send: "Send",
-    typing: "is typing...",
-    box: "Write a message...",
-    browse: "Browse",
-    capturePhoto: "Take a Photo",
-    upload_image_with_message: "Upload Image with Message",
-    capture_image_with_message: "Capture Image with Message",
-    capture_video_with_message: "Capture Video with Message",
-    speech_to_text: "Speech to Text",
-    ask_from_ai: "Ask from AI",
-    close: "Close",
-    enter_your_message: "Enter your message here...",
-    start_video: "Start Video",
-    stop_video: "Stop Video",
-    upload: "Upload and send",
-    duration: "Duration",
-    upload_successful: "Upload Successful",
-    image_upload_successful: "Image upload success",
-    capture_successful: "Image capture success",
-    video_capture_successful: "Video capture success",
-    please_select_file: "Please select a file to upload",
-    failed_to_upload_file: "Failed to upload file. Please try again.",
-    your_browser_not_support_video_tag: "Your browser does not support the video tag.",
-    aiTypingIndicator: "AI is thinking...",
-    record_audio: "Record Audio",
-    speech: "is recoding speech...",
-    please_capture_image: "Please capture an image to upload",
-    please_capture_video: "Please capture a video to upload",
-    please_write_message: "Please write a message to send",
-    generate_image: "Generate Image",
-    // ROHTO engineering form fields
-    rohto_role_label: "Role (who am I / who am I asking you to be?)",
-    rohto_role_placeholder: "E.g. 'Act as an AI assistant' or 'I am a lawyer...'",
-    rohto_problem_label: "Instructions (what are the instructions?)",
-    rohto_problem_placeholder: "Describe your instructions or question",
-    rohto_history_label: "Notes (what are your observations?)",
-    rohto_history_placeholder: "Break the task into clear steps to clarify the answer",
-    rohto_goal_label: "Goal (what do you want to achieve?)",
-    rohto_goal_placeholder: "Describe what you hope as a result",
-    rohto_expectation_label: "Relevance (what kind of answer do you expect?)",
-    rohto_expectation_placeholder: "Specify what you want it to address and what to leave out",
-    rohto_for_prompt: "My question is",
-    rohto_disable: "Disable ROHTO",
-    rohto_enable: "Enable ROHTO",
-  },
-  fi: {
-    send: "Lähetä",
-    typing: "kirjoittaa...",
-    box: "Kirjoita viesti...",
-    browse: "Selaa",
-    capturePhoto: "Ota Kuva",
-    upload_image_with_message: "Lataa kuva viestin kassa",
-    capture_image_with_message: "Kaappaa kuva viestin kanssa",
-    capture_video_with_message: "Kaappaa video viestin kanssa",
-    speech_to_text: "Puhe tekstiksi",
-    ask_from_ai: "Kysy tekoälyltä",
-    close: "Sulje",
-    enter_your_message: "Kirjoita viestisi tähän...",
-    start_video: "Aloita Video",
-    stop_video: "Lopeta Video",
-    upload: "Lataa ja lähetä",
-    duration: "Kesto",
-    upload_successful: "Lataus onnistui",
-    image_upload_successful: "Kuvan lataus onnistui",
-    capture_successful: "Kuvan kaappaus onnistui",
-    video_capture_successful: "Videon kaappaus onnistui",
-    please_select_file: "Olehyvä ja valitse tiedosto minkä haluat ladata",
-    failed_to_upload_file: "Tiedoston lataus epäonnistui. Olehyvä ja yritä uudestaan.",
-    your_browser_not_support_video_tag: "Selaimesi ei tue video tagia.",
-    aiTypingIndicator: "Tekoäly miettii ...",
-    record_audio: "Näuhoita ääni",
-    speech: "nauhoittaa puhetta...",
-    please_capture_image: "Olehyvä ja kaappaa kuva ladataksesi",
-    please_capture_video: "Olehyvä ja kaappaa video ladataksesi",
-    please_write_message: "Olehyvä ja kirjoita viesti lähettääksesi",
-    generate_image: "Luo kuva",
-    // ROHTO engineering form fields
-    rohto_role_label: "Rooli (kuka minä olen / ketä pyydän olemaan?)",
-    rohto_role_placeholder: "Esim. 'Toimi tekoälyavustajana' tai 'Olen lakimies...'",
-    rohto_problem_label: "Ohjeet (mitkä ovat ohjeet?)",
-    rohto_problem_placeholder: "Kuvaa ohjeesi tai kysymyksesi",
-    rohto_history_label: "Huomiot (mitkä ovat huomiosi?)",
-    rohto_history_placeholder: "Jaa tehtävä selkeisiin vaiheisiin vastauksen selkeyttämiseksi",
-    rohto_goal_label: "Tavoite (mitä haluat saavuttaa?)",
-    rohto_goal_placeholder: "Kerro mitä toivot tulokseksi",
-    rohto_expectation_label: "Osuvuus (millaista vastausta odotat?)",
-    rohto_expectation_placeholder: "Tarkenna mitä haluat sen käsittelevän ja jättävän pois",
-    rohto_for_prompt: "Kysymykseni on",
-    rohto_disable: "Poista ROHTO käytöstä",
-    rohto_enable: "Ota ROHTO käyttöön",
-  },
-  sv: {
-    send: "Skicka",
-    typing: "skriver...",
-    box: "Skriv meddelande...",
-    browse: "Bläddra",
-    capturePhoto: "Ta en bild",
-    upload_image_with_message: "Ladda upp bild med meddelande",
-    capture_image_with_message: "Fånga bild med meddelande",
-    capture_video_with_message: "Fånga video med meddelande",
-    speech_to_text: "Tal till text",
-    ask_from_ai: "Fråga en AI",
-    close: "Stäng",
-    enter_your_message: "Skriv ditt meddelande här...",
-    start_video: "Starta video",
-    stop_video: "Stoppa video",
-    upload: "Ladda upp och skicka",
-    duration: "Varaktighet",
-    upload_successful: "Uppladdning lyckades",
-    image_upload_successful: "Bilduppladdning lyckades",
-    capture_successful: "Bildupptagning lyckades",
-    video_capture_successful: "Videoupptagning lyckades",
-    please_select_file: "Vänligen välj en fil att ladda upp",
-    failed_to_upload_file: "Misslyckades med att ladda upp filen. Försök igen.",
-    your_browser_not_support_video_tag: "Din webbläsare stöder inte videomarkeringen.",
-    aiTypingIndicator: "AI tänker ...",
-    record_audio: "Spela in ljud",
-    speech: "spela in tal...",
-    please_capture_image: "Vänligen ta en bild för att ladda upp",
-    please_capture_video: "Vänligen ta en video för att ladda upp",
-    please_write_message: "Vänligen skriv ett meddelande att skicka",
-    generate_image: "Generera bild",
-    // ROHTO engineering form fields
-    rohto_role_label: "Roll (vem är jag / vem ber jag dig vara?)",
-    rohto_role_placeholder: "T.ex. 'Agera som AI-assistent' eller 'Jag är jurist...'",
-    rohto_problem_label: "Instruktioner (vilka är instruktionerna?)",
-    rohto_problem_placeholder: "Beskriv dina instruktioner eller din fråga",
-    rohto_history_label: "Anteckningar (vilka är dina observationer?)",
-    rohto_history_placeholder: "Dela upp uppgiften i tydliga steg för att förtydliga svaret",
-    rohto_goal_label: "Mål (vad vill du uppnå?)",
-    rohto_goal_placeholder: "Beskriv vad du hoppas som resultat",
-    rohto_expectation_label: "Relevans (vilket slags svar förväntar du dig?)",
-    rohto_expectation_placeholder: "Specificera vad du vill att det ska ta upp och vad som ska utelämnas",
-    rohto_for_prompt: "Min fråga är",
-    rohto_disable: "Inaktivera ROHTO",
-    rohto_enable: "Aktivera ROHTO",
-  }
-});
+import Modal from "react-bootstrap/Modal";
+import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
+import Webcam from "react-webcam";
+import Swal from "sweetalert2";
+import MessageList from "./MessageList";
+import AudioRecorder from "../AudioRecorder/AudioRecorder";
+import { Mic, Camera, CameraVideo, Upload } from "react-bootstrap-icons";
+import {
+  API_BASE_URL,
+  API_STORAGE_BASE_URL,
+  ACCESS_TOKEN_NAME,
+  ACCESS_USER_DATA,
+  API_PUSHER_KEY,
+  API_PUSHER_CLUSTER,
+} from "../../constants/apiConstants";
+import { CloseButton } from "react-bootstrap";
+import Offcanvas from "react-bootstrap/Offcanvas";
+import { useTranslation } from "react-i18next";
 
 const PusherChat = () => {
   const authData = localStorage.getItem(ACCESS_USER_DATA);
   const authArray = JSON.parse(authData);
-  const [username, setUsername] = useState(authArray.name || 'Guest');
+  const [username, setUsername] = useState(authArray.name || "Guest");
   const [messages, setMessages] = useState([]);
-  const [message, setMessage] = useState('');
-  const [typingIndicator, setTypingIndicator] = useState('');
-  const [speechIndicator, setSpeechIndicator] = useState('');
-  const [aiTypingIndicator, setAiTypingIndicator] = useState('');
+  const [message, setMessage] = useState("");
+  const [typingIndicator, setTypingIndicator] = useState("");
+  const [speechIndicator, setSpeechIndicator] = useState("");
+  const [aiTypingIndicator, setAiTypingIndicator] = useState("");
   const [isAiEnabled, setIsAiEnabled] = useState(false); // State to track AI checkbox
   const [isGenerateEnabled, setIsGenerateEnabled] = useState(false); // State to track AI checkbox
+  const [generateFileEnabled, setGenerateFileEnabled] = useState(false);
+  const [generateFileType, setGenerateFileType] = useState("docx"); // docx | xlsx | pdf
   const typingTimeoutRef = useRef(null);
   const [showModal, setShowModal] = useState(false);
   const [showCaptureModal, setCaptureShowModal] = useState(false);
@@ -186,53 +54,535 @@ const PusherChat = () => {
   const [videoDuration, setVideoDuration] = useState(0);
   const [isThinking, setIsThinking] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
-  const [error, setError] = useState('');
-  const [highlight, setHighlight] = useState({ button: false, textarea: false });
-  const [role, setRole] = useState('');
-  const [problem, setProblem] = useState('');
-  const [history, setHistory] = useState('');
-  const [goal, setGoal] = useState('');
-  const [expectation, setExpectation] = useState('');
+  const [error, setError] = useState("");
+  const [highlight, setHighlight] = useState({
+    button: false,
+    textarea: false,
+  });
+  const [role, setRole] = useState("");
+  const [problem, setProblem] = useState("");
+  const [history, setHistory] = useState("");
+  const [goal, setGoal] = useState("");
+  const [expectation, setExpectation] = useState("");
   const [showPromptOverlay, setShowPromptOverlay] = useState(false);
-  const [isRohtoEnabled, setIsRohtoEnabled] = useState(true); // Add this state
+  const [isRohtoEnabled, setIsRohtoEnabled] = useState(false); // Add this state
+  const [isRealtimeActive, setIsRealtimeActive] = useState(false);
+  const pcRef = useRef(null);
+  const remoteAudioRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const dataChannelRef = useRef(null);
+  const realtimeTextAccumRef = useRef("");
+  const realtimeUserTextRef = useRef("");
+  const recognitionRef = useRef(null);
+  const lastUserTranscriptRef = useRef("");
+
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [firstItemIndex, setFirstItemIndex] = useState();
+  const virtuosoRef = useRef(null);
 
   const enableRohto = () => setIsRohtoEnabled(true);
   const disableRohto = () => setIsRohtoEnabled(false);
   const toggleRohto = () => setIsRohtoEnabled((prev) => !prev);
 
-  var query = window.location.search.substring(1);
-  var urlParams = new URLSearchParams(query);
-  var localization = urlParams.get('lang');
+  const startRealtimeConversation = async () => {
+    try {
+      // Fetch session token from backend using normalized API_BASE_URL
+      console.log('Fetching OpenAI session from', `${API_BASE_URL}/api/chat/openai-session`);
+      const resp = await fetch(`${API_BASE_URL}/api/chat/openai-session`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('login_access_token')}`,
+        },
+      });
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(`HTTP ${resp.status}: ${text.substring(0, 200)}`);
+      }
+      const session = await resp.json();
+      const ephemeralKey = session?.client_secret?.value || session?.client_secret;
 
-  if (localization == null) {
-    strings.setLanguage(API_DEFAULT_LANGUAGE);
-  } else {
-    strings.setLanguage(localization);
-  }
+      if (!ephemeralKey) {
+        throw new Error(`No client_secret in session response: ${JSON.stringify(session)}`);
+      }
+
+      console.log('Session obtained, creating WebRTC connection...');
+      const pc = new RTCPeerConnection();
+      pcRef.current = pc;
+
+      // play remote audio
+      pc.ontrack = (event) => {
+        try {
+          const [remoteStream] = event.streams;
+          if (remoteAudioRef.current && remoteStream) {
+            remoteAudioRef.current.srcObject = remoteStream;
+            console.log('Remote audio stream received');
+          }
+        } catch (err) {
+          console.error('ontrack error', err);
+        }
+      };
+
+      // Listen for data channel opened by OpenAI
+      pc.ondatachannel = (ev) => {
+        const ch = ev.channel;
+        dataChannelRef.current = ch;
+        console.log('Data channel received from OpenAI:', ch.label, 'readyState:', ch.readyState);
+
+        ch.onopen = () => {
+          console.log('Success: Data channel opened, readyState:', ch.readyState);
+          // Send session configuration once channel is open
+          const systemMsg = {
+            type: 'session.update',
+            session: {
+              instructions: `You are a helpful assistant. Respond in the same language the user speaks, only languages will be English, Finnish or Swedish. Be concise.`,
+              voice: 'alloy',
+              modalities: ['text', 'audio']
+            }
+          };
+          try {
+            ch.send(JSON.stringify(systemMsg));
+            console.log('Success: Sent session update');
+          } catch (err) {
+            console.log('Error: Could not send session update:', err);
+          }
+        };
+
+        ch.onmessage = (m) => {
+          console.log('Raw datachannel message received:', m.data?.substring?.(0, 100));
+          try {
+            const data = JSON.parse(m.data);
+            console.log('Success: Parsed to JSON:', data.type);
+            handleOpenAIEvent(data);
+          } catch (err) {
+            console.log('Warning: Data channel message (not JSON):', m.data?.substring?.(0, 200));
+          }
+        };
+
+        ch.onerror = (err) => {
+          console.error('Error: Data channel error:', err);
+        };
+        ch.onclose = () => {
+          console.log('Warning: Data channel closed');
+          dataChannelRef.current = null;
+        };
+      };
+
+      // Log WebRTC peer connection states
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log('ICE candidate:', event.candidate.candidate?.substring?.(0, 80));
+        } else {
+          console.log('ICE gathering complete');
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        console.log('WebRTC connection state:', pc.connectionState);
+      };
+
+      // get microphone
+      console.log('Requesting microphone access...');
+      const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = localStream;
+      localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
+      console.log('Microphone added to peer connection');
+
+      // Start Web Speech API for local transcription (displays user text immediately)
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
+
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US,fi-FI,sv-SE';
+
+        recognition.onstart = () => {
+          console.log('Web Speech API started');
+        };
+
+        recognition.onresult = (event) => {
+          let interimTranscript = '';
+          let finalTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' ';
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+
+          // Display final transcript in chat
+          if (finalTranscript && finalTranscript !== lastUserTranscriptRef.current) {
+            console.log('Success: User said:', finalTranscript);
+            const userMessage = {
+              username: username,
+              message: finalTranscript.trim(),
+              generate: false,
+              created_at: new Date().toISOString(),
+            };
+            setMessages((prev) => [...prev, userMessage]);
+            saveMessageToDatabase(userMessage);
+            lastUserTranscriptRef.current = finalTranscript;
+          }
+        };
+
+        recognition.onerror = (event) => {
+          console.log('Web Speech API error:', event.error);
+        };
+
+        recognition.onend = () => {
+          console.log('Web Speech API stopped');
+          // Restart if realtime is still active
+          if (isRealtimeActive && recognitionRef.current) {
+            try {
+              recognitionRef.current.start();
+            } catch (e) {
+              console.log('Could not restart recognition:', e);
+            }
+          }
+        };
+
+        // Start listening
+        recognition.start();
+      } else {
+        console.warn('Warning: Web Speech API not supported in this browser');
+      }
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      console.log('SDP offer created');
+
+      // send SDP offer to OpenAI Realtime endpoint using ephemeral key
+      console.log('Sending SDP offer to OpenAI realtime...');
+      const sdpResp = await fetch('https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${ephemeralKey}`,
+          'Content-Type': 'application/sdp',
+        },
+        body: offer.sdp,
+      });
+
+      if (!sdpResp.ok) {
+        throw new Error(`OpenAI API error ${sdpResp.status}`);
+      }
+
+      const answerSdp = await sdpResp.text();
+      console.log('SDP answer received from OpenAI');
+      await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+
+      setIsRealtimeActive(true);
+      // indicate speaking status to others
+      sendSpeechStatus(true);
+      console.log('Realtime conversation started successfully');
+    } catch (err) {
+      console.error('Realtime start failed', err);
+      alert((t('realtime_start_failed')) + '\n\n' + err.message);
+    }
+  };
+
+  const handleOpenAIEvent = (data) => {
+    try {
+      // Log all events to see what's actually coming through
+      console.log('OpenAI Event:', data.type);
+      console.log('   Full data:', JSON.stringify(data).substring(0, 300));
+
+      // Handle transcript from user input
+      if (data.type === 'conversation.item.input_audio_transcription.completed') {
+        const transcript = data?.transcript;
+        if (transcript) {
+          console.log('Success: User transcript:', transcript);
+          const userMessage = {
+            username: username,
+            message: transcript,
+            generate: false,
+            created_at: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, userMessage]);
+          saveMessageToDatabase(userMessage);
+        }
+      }
+
+      // Handle conversation items that might contain user text
+      if (data.type === 'conversation.item.created' && data.item?.role === 'user') {
+        console.log('User conversation item created:', data.item);
+        // Try to extract transcript from the item
+        const content = data.item?.content;
+        if (Array.isArray(content)) {
+          content.forEach((c) => {
+            if (c.type === 'text' && c.text) {
+              console.log('User text from item:', c.text);
+              const userMessage = {
+                username: username,
+                message: c.text,
+                generate: false,
+                created_at: new Date().toISOString(),
+              };
+              setMessages((prev) => [...prev, userMessage]);
+              saveMessageToDatabase(userMessage);
+            }
+          });
+        }
+      }
+
+      // Handle assistant response items
+      if (data.type === 'conversation.item.created' && data.item?.role === 'assistant') {
+        console.log('Assistant conversation item created:', data.item);
+      }
+
+      // Handle response text deltas (streaming response text)
+      if (data.type === 'response.content_block.delta') {
+        if (data.delta?.type === 'text_delta' && data.delta?.text) {
+          const textChunk = data.delta.text;
+          realtimeTextAccumRef.current += textChunk;
+          console.log('Text delta:', textChunk);
+        }
+      }
+
+      // Handle response creation (start of response)
+      if (data.type === 'response.created') {
+        console.log('Response started');
+        realtimeTextAccumRef.current = ''; // Reset accumulator
+      }
+
+      // Handle when response is fully done
+      if (data.type === 'response.done') {
+        const fullText = realtimeTextAccumRef.current.trim();
+        if (fullText) {
+          console.log('Response complete:', fullText);
+          const aiMessage = {
+            username: 'AI',
+            message: fullText,
+            generate: false,
+            created_at: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, aiMessage]);
+          saveMessageToDatabase(aiMessage);
+        }
+        realtimeTextAccumRef.current = '';
+      }
+
+      // Handle specific content block done events
+      if (data.type === 'response.content_block.done') {
+        console.log('Content block done:', data.content_block?.type);
+        if (data.content_block?.type === 'text' && realtimeTextAccumRef.current.trim()) {
+          const fullText = realtimeTextAccumRef.current.trim();
+          console.log('Response complete:', fullText);
+          const aiMessage = {
+            username: 'AI',
+            message: fullText,
+            generate: false,
+            created_at: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, aiMessage]);
+          saveMessageToDatabase(aiMessage);
+          realtimeTextAccumRef.current = '';
+        }
+      }
+
+      // Handle errors
+      if (data.type === 'error') {
+        console.error('OpenAI error:', data.error);
+      }
+    } catch (err) {
+      console.error('Error handling OpenAI event:', err);
+    }
+  };
+
+  const stopRealtimeConversation = async () => {
+    try {
+      // Stop Web Speech API
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+          recognitionRef.current.abort();
+        } catch (e) {
+          console.log('Could not stop Web Speech API:', e);
+        }
+        recognitionRef.current = null;
+      }
+
+      if (pcRef.current) {
+        pcRef.current.getSenders().forEach((s) => {
+          try { if (s.track) s.track.stop(); } catch (e) { }
+        });
+        pcRef.current.close();
+        pcRef.current = null;
+      }
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((t) => t.stop());
+        localStreamRef.current = null;
+      }
+      if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+      setIsRealtimeActive(false);
+      sendSpeechStatus(false);
+    } catch (err) {
+      console.error('Realtime stop failed', err);
+    }
+  };
+
+  const [loadingOlder, setLoadingOlder] = useState(false);
+
+  const fileInputRef = useRef(null);
+
+
+  const { t, i18n } = useTranslation();
+
+  const urlParams = new URLSearchParams(window.location.search);
+
+  useEffect(() => {
+    const langFromUrl = urlParams.get("lang");
+    if (langFromUrl && ["en", "fi", "sv"].includes(langFromUrl)) {
+      i18n.changeLanguage(langFromUrl);
+    }
+  }, [i18n, urlParams]);
+
+  // Handle PDF selection
+  const handlePdfChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      alert(t('invalid_pdf_selection'));
+      return;
+    }
+
+    // Show "AI is thinking" indicator via Pusher
+    setIsThinking(true);
+    await Axios.post(
+      `${API_BASE_URL}/api/chat/thinking`,
+      { username: "AI", isThinking: true },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+        },
+      }
+    );
+
+    // send to backend
+    const formData = new FormData();
+    formData.append("pdf", file);
+    // Ensure message is not empty for PDF uploads
+    const messageForPdf = message.trim() || 'Please analyze this PDF document';
+    formData.append("message", messageForPdf);
+
+    try {
+      const token = localStorage.getItem(ACCESS_TOKEN_NAME);
+      console.log('PDF Upload - Token from localStorage:', token);
+      console.log('PDF Upload - Token first 20 chars:', token ? token.substring(0, 20) : 'null');
+
+      // Validate token before proceeding
+      if (!validateToken()) {
+        return; // Stop execution if token is invalid
+      }
+
+      console.log('About to send request with token:', token.substring(0, 50) + '...');
+      console.log('Full Authorization header:', `Bearer ${token}`);
+
+      // Ensure message is not empty for PDF uploads
+      const messageText = message.trim() || 'PDF document uploaded for analysis';
+
+      const responseSubmit = await Axios.post(
+        `${API_BASE_URL}/api/chat/messages`,
+        { username, message: messageText, type: null },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setMessage("");
+
+      const response = await Axios.post(
+        `${API_BASE_URL}/api/chat/analyze-pdf`,
+        formData, // <-- body goes here directly
+        {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem(ACCESS_TOKEN_NAME),
+            "Content-Type": "multipart/form-data", // important for file upload
+          },
+        }
+      );
+
+      if (response.data.success === false) {
+        throw new Error("Failed to upload PDF");
+      } else {
+        // Show success message
+        Swal.fire({
+          icon: "success",
+          title: t('upload_successful'),
+          text: t('pdf_upload_successful'),
+        }).then((result) => {
+          if (result.isConfirmed) {
+            setIsThinking(false);
+            Axios.post(
+              `${API_BASE_URL}/api/chat/thinking`,
+              { username: "AI", isThinking: false },
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+                },
+              }
+            );
+            fetchMessages(); // Refresh messages after successful upload     
+            setMessage("");
+          }
+        });
+      }
+
+
+    } catch (err) {
+      console.error(err);
+      alert(t('error_analyzing_pdf'));
+      Swal.fire({
+        icon: "error",
+        title: t('upload_failure'),
+        text: t('pdf_upload_failure'),
+      });
+      setIsThinking(false);
+      Axios.post(
+        `${API_BASE_URL}/api/chat/thinking`,
+        { username: "AI", isThinking: false },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+          },
+        }
+      );
+    }
+  };
 
   const handleShowModal = () => setShowModal(true);
   const handleCloseModal = () => {
     setShowModal(false);
     setImageUploading(false);
-    setError('');
-    setHighlight({ button: false, textarea: false }); 
-  }
-  
+    setError("");
+    setHighlight({ button: false, textarea: false });
+  };
+
   const handleCaptureShowModal = () => setCaptureShowModal(true);
   const handleCaptureCloseModal = () => {
     setCaptureShowModal(false);
     setImageSrc(null);
-    setError('');
+    setError("");
     setHighlight({ button: false, textarea: false });
-  }
+  };
 
   const handleCaptureVideoShowModal = () => setCaptureVideoShowModal(true);
-  
+
   const handleCaptureVideoCloseModal = () => {
     setCaptureVideoShowModal(false);
     setVideoDuration(0); // Reset video duration to 0
     setImageVideoSrc(null);
-    setError('');
+    setError("");
     setHighlight({ button: false, textarea: false });
   };
 
@@ -265,11 +615,10 @@ const PusherChat = () => {
       audio: true,
     });
 
-
     mediaRecorderRef.current = new MediaRecorder(stream);
-    
+
     mediaRecorderRef.current.addEventListener(
-      'dataavailable',
+      "dataavailable",
       handleDataAvailable
     );
     mediaRecorderRef.current.start();
@@ -277,21 +626,25 @@ const PusherChat = () => {
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state === "recording"
+    ) {
       mediaRecorderRef.current.stop();
     }
   };
 
-  const anyModalOpen = showModal || showCaptureModal || showCaptureVideoShowModal;
+  const anyModalOpen =
+    showModal || showCaptureModal || showCaptureVideoShowModal;
 
   useEffect(() => {
     if (!anyModalOpen) {
-      setMessage('');
+      setMessage("");
     }
   }, [anyModalOpen]);
 
   const clearMessage = () => {
-    setMessage('');
+    setMessage("");
   };
 
   useEffect(() => {
@@ -310,11 +663,48 @@ const PusherChat = () => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = seconds % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
+  };
+
+  // Utility function to validate JWT token
+  const validateToken = () => {
+    const token = localStorage.getItem(ACCESS_TOKEN_NAME);
+
+    // Check if token is valid JWT format (should have exactly 3 parts separated by dots)
+    if (!token || typeof token !== 'string' || token.trim() === '' || token.split('.').length !== 3) {
+      console.error('Invalid JWT token format detected on component mount, clearing localStorage and redirecting to login');
+      console.error('Current token:', token);
+      console.error('Token type:', typeof token);
+      console.error('Token length:', token ? token.length : 'null');
+      localStorage.clear();
+      alert(t('token_expired_or_invalid'));
+      window.location.href = '/';
+      return false;
+    }
+
+    // Additional validation: Check if token parts are not empty
+    const tokenParts = token.split('.');
+    if (tokenParts.some(part => !part || part.trim() === '')) {
+      console.error('JWT token has empty parts detected on component mount, clearing localStorage and redirecting to login');
+      console.error('Token parts:', tokenParts);
+      localStorage.clear();
+      alert(t('token_expired_or_invalid'));
+      window.location.href = '/';
+      return false;
+    }
+
+    return true;
   };
 
   // Initialize Pusher and fetch initial messages
   useEffect(() => {
+    // Validate token first before doing anything
+    if (!validateToken()) {
+      return; // Stop execution if token is invalid
+    }
+
     fetchUsername();
     const cleanup = initializePusher();
     fetchMessages(); // Fetch messages on component mount
@@ -323,39 +713,40 @@ const PusherChat = () => {
 
   const initializePusher = () => {
     const pusher = new Pusher(API_PUSHER_KEY, { cluster: API_PUSHER_CLUSTER });
-    const channel = pusher.subscribe(authArray.domain + '_chat');
+    const channel = pusher.subscribe(authArray.domain + "_chat");
 
-    channel.bind('message', (newMessage) => {
-        //setMessages((prevMessages) => [newMessage, ...prevMessages]);
-        fetchMessages();
+    channel.bind("message", (newMessage) => {
+      //setMessages((prevMessages) => [newMessage, ...prevMessages]);
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+      //fetchMessages();
     });
 
-    channel.bind('user-typing', ({ username: typingUsername, isTyping }) => {
-        if (isTyping) {
-            setTypingIndicator(`${typingUsername} ${strings.typing}`);
-            clearTimeout(typingTimeoutRef.current);
-            typingTimeoutRef.current = setTimeout(() => {
-                setTypingIndicator('');
-            }, 1000);
-        }
-    });
-
-    channel.bind('user-speech', ({ username: speechUsername, isSpeech }) => {
-      if (isSpeech) {
-        setSpeechIndicator(`${speechUsername} ${strings.speech}`);
-      } else {
-        setSpeechIndicator('');
+    channel.bind("user-typing", ({ username: typingUsername, isTyping }) => {
+      if (isTyping) {
+        setTypingIndicator(`${typingUsername} ${t('typing')}`);
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
+          setTypingIndicator("");
+        }, 1000);
       }
     });
 
-    channel.bind('ai-thinking', function (data) {
+    channel.bind("user-speech", ({ username: speechUsername, isSpeech }) => {
+      if (isSpeech) {
+        setSpeechIndicator(`${speechUsername} ${t('speech')}`);
+      } else {
+        setSpeechIndicator("");
+      }
+    });
+
+    channel.bind("ai-thinking", function (data) {
       setIsThinking(data.isThinking);
-    });    
+    });
 
     return () => {
-        channel.unbind_all();
-        channel.unsubscribe();
-        clearTimeout(typingTimeoutRef.current);
+      channel.unbind_all();
+      channel.unsubscribe();
+      clearTimeout(typingTimeoutRef.current);
     };
   };
 
@@ -364,7 +755,7 @@ const PusherChat = () => {
     if (!token) return;
     try {
       const { data } = await Axios.get(`${API_BASE_URL}/api/users/userdata`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       setUsername(data.name);
     } catch (error) {
@@ -372,16 +763,73 @@ const PusherChat = () => {
     }
   };
 
-  const fetchMessages = () => {
-    Axios.get(`${API_BASE_URL}/api/chat/messages`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
-    })
-      .then((response) => {
-        setMessages(response.data);
-      })
-      .catch((error) => {
-        console.error('Failed to fetch messages', error);
-      });
+  useEffect(() => {
+    (async () => {
+      const res = await fetchMessages(1); // newest page (backend should paginate DESC)
+      const initialMessages = res.messages.reverse(); // reverse to ASC order
+      setMessages(initialMessages);
+      setFirstItemIndex(100000); // Set to 10000 to make sure firstItemIndex MUST BE LESS than 0
+      setPage(1);
+      setHasMore(res.current_page < res.last_page);
+    })();
+  }, []);
+
+  const loadOlderMessages = async () => {
+    if (!hasMore) return;
+
+    setLoadingOlder(true);
+
+    const nextPage = page + 1;
+    const res = await fetchMessages(nextPage);
+    const newMessages = res.messages.reverse();
+
+    if (newMessages.length === 0) {
+      setHasMore(false);
+      return;
+    }
+    setMessages((prevMessages) => {
+      const existingIds = new Set(prevMessages.map((msg) => msg.id));
+      const uniqueMessages = newMessages.filter(
+        (msg) => !existingIds.has(msg.id)
+      );
+      return [...uniqueMessages, ...prevMessages];
+    });
+    setPage(nextPage);
+    setFirstItemIndex((prev) => prev - newMessages.length);
+
+    setLoadingOlder(false);
+  };
+
+  // const loadNewerMessages = async () => {
+  //   if (!hasNewer) return;
+  //   const pageToFetch = newestPage + 1;
+  //   const res = await fetchMessages(pageToFetch);
+  //   const newMessages = res.messages;
+
+  //   if (newMessages.length === 0) {
+  //     setHasNewer(false);
+  //     return;
+  //   }
+
+  //   setMessages((prev) => [...prev, ...newMessages]);
+  //   setNewestPage(pageToFetch);
+  // };
+
+  const fetchMessages = async (pageNumber = 1) => {
+    try {
+      const response = await Axios.get(
+        `${API_BASE_URL}/api/chat/messages?page=${pageNumber}`,
+        {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem(ACCESS_TOKEN_NAME),
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch messages", error);
+      throw error;
+    }
   };
 
   const handleFileChange = (event) => {
@@ -393,8 +841,8 @@ const PusherChat = () => {
       };
       reader.readAsDataURL(file);
       setSelectedFile(file);
-      setError('');
-      setHighlight({ button: false, textarea: false }); 
+      setError("");
+      setHighlight({ button: false, textarea: false });
     }
   };
 
@@ -405,48 +853,100 @@ const PusherChat = () => {
       sendTypingStatus(false);
     }, 500);
     sendTypingStatus(true);
-    setError('');
-    setHighlight({ button: false, textarea: false }); 
+    setError("");
+    setHighlight({ button: false, textarea: false });
   };
 
   const sendTypingStatus = async (isTyping) => {
-    await Axios.post(`${API_BASE_URL}/api/chat/typing`, { username, isTyping }, {
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
-    }).catch((error) => console.error('Error sending typing status', error));
+    await Axios.post(
+      `${API_BASE_URL}/api/chat/typing`,
+      { username, isTyping },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+        },
+      }
+    ).catch((error) => console.error("Error sending typing status", error));
   };
 
   const sendSpeechStatus = async (isSpeech) => {
-    await Axios.post(`${API_BASE_URL}/api/chat/speech`, { username, isSpeech }, {
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
-    }).catch((error) => console.error('Error sending speech status', error));
+    await Axios.post(
+      `${API_BASE_URL}/api/chat/speech`,
+      { username, isSpeech },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+        },
+      }
+    ).catch((error) => console.error("Error sending speech status", error));
   };
 
   const submitMessage = async (e) => {
     e.preventDefault();
     try {
-      const optionSelected = isAiEnabled ? 'ask_from_ai' : isGenerateEnabled ? 'generate_image' : null;
-      await Axios.post(`${API_BASE_URL}/api/chat/messages`, { username, message }, {
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
-      });
-      setMessage('');
+      const optionSelected = isAiEnabled
+        ? "ask_from_ai"
+        : isGenerateEnabled
+          ? "generate_image"
+          : null;
+      // Send the actual message to the backend
+      const response = await Axios.post(
+        `${API_BASE_URL}/api/chat/messages`,
+        { username, message, type: optionSelected },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+          },
+        }
+      );
+      //const savedMessage = response.data.message;
+      //console.log("Backend message:", savedMessage);
+      // Use the backend-confirmed message (with id, gender, etc.)
+      //setMessages((prevMessages) => [...prevMessages, savedMessage]);
+      // Clear the message box
+      setMessage("");
       sendTypingStatus(false);
       if (isAiEnabled) {
         setIsThinking(true);
-        await Axios.post(`${API_BASE_URL}/api/chat/thinking`, { username: "AI", isThinking: true }, {
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
-        });
+        await Axios.post(
+          `${API_BASE_URL}/api/chat/thinking`,
+          { username: "AI", isThinking: true },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem(
+                ACCESS_TOKEN_NAME
+              )}`,
+            },
+          }
+        );
         await generateResponse();
       } else if (isGenerateEnabled) {
         setIsThinking(true);
-        await Axios.post(`${API_BASE_URL}/api/chat/thinking`, { username: "AI", isThinking: true }, {
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
-        });
+        await Axios.post(
+          `${API_BASE_URL}/api/chat/thinking`,
+          { username: "AI", isThinking: true },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem(
+                ACCESS_TOKEN_NAME
+              )}`,
+            },
+          }
+        );
         await generateImage();
-      } else {
-        fetchMessages(); // Fetch messages after sending user message
       }
     } catch (error) {
-      console.error('Failed to send message', error);
+      console.error("Failed to send message", error);
+      if (error.response) {
+        console.log("Server responded with:", error.response.data);
+      } else {
+        console.log("No response from server at all");
+      }
     }
   };
 
@@ -454,36 +954,38 @@ const PusherChat = () => {
     setIsAiEnabled(e.target.checked);
     if (e.target.checked) setIsGenerateEnabled(false); // Uncheck the other option
   };
-  
+
   const handleGenerateCheckboxChange = (e) => {
     setIsGenerateEnabled(e.target.checked);
     if (e.target.checked) setIsAiEnabled(false); // Uncheck the other option
   };
 
   const validateUpload = (image, message) => {
-    let errorMsg = '';
+    let errorMsg = "";
     let highlightButton = false;
     let highlightTextarea = false;
-  
+
     if (!image && !message) {
-      errorMsg = `${strings.please_select_file}<br />${strings.please_write_message}`;
+      errorMsg = `${t('please_select_file')}<br />${t('please_write_message')}`;
       highlightButton = true;
       highlightTextarea = true;
     } else if (!image) {
-      errorMsg = strings.please_select_file;
+      errorMsg = t('please_select_file');
       highlightButton = true;
     } else if (!message) {
-      errorMsg = strings.please_write_message;
+      errorMsg = t('please_write_message');
       highlightTextarea = true;
     }
-  
+
     return { errorMsg, highlightButton, highlightTextarea };
   };
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    const { errorMsg, highlightButton, highlightTextarea } = validateUpload(imageUploading, message);
-
+    const { errorMsg, highlightButton, highlightTextarea } = validateUpload(
+      imageUploading,
+      message
+    );
     if (errorMsg) {
       setError(errorMsg);
       setHighlight({ button: highlightButton, textarea: highlightTextarea });
@@ -492,37 +994,40 @@ const PusherChat = () => {
       }, 3000); // Clear highlighting after 3 seconds
       return;
     }
-
-    setError(''); // Clear any existing error
+    setError(""); // Clear any existing error
     setHighlight({ button: false, textarea: false }); // Remove highlighting
 
     const formData = new FormData();
-    formData.append('message', message);
-    formData.append('image', selectedFile);
+    formData.append("message", message);
+    formData.append("image", selectedFile);
 
     try {
-      const response = await Axios.post(`${API_BASE_URL}/api/chat/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`
+      const response = await Axios.post(
+        `${API_BASE_URL}/api/chat/upload`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+          },
         }
-      });
+      );
       // Clear message and selected file after successful upload
-      setMessage('');
+      setMessage("");
       setSelectedFile(null);
       handleCloseModal();
       Swal.fire({
-        icon: 'success',
-        title: strings.upload_successful, 
-        text: strings.image_upload_successful,  
+        icon: "success",
+        title: t('upload_successful'),
+        text: t('image_upload_successful'),
       }).then((result) => {
         if (result.isConfirmed) {
           fetchMessages();
         }
       });
     } catch (error) {
-      console.error('Error uploading file:', error);
-      setError(strings.failed_to_upload_file);
+      console.error("Error uploading file:", error);
+      setError(t('failed_to_upload_file'));
     }
   };
 
@@ -530,13 +1035,16 @@ const PusherChat = () => {
     const imageSrc = webcamRef.current.getScreenshot();
     // Update the state with the captured image source
     setImageSrc(imageSrc);
-    setError(''); 
-    setHighlight({ button: false, textarea: false }); 
+    setError("");
+    setHighlight({ button: false, textarea: false });
   };
 
   const uploadCapture = async (e) => {
     e.preventDefault();
-    const { errorMsg, highlightButton, highlightTextarea } = validateUpload(imageSrc, message);
+    const { errorMsg, highlightButton, highlightTextarea } = validateUpload(
+      imageSrc,
+      message
+    );
 
     if (errorMsg) {
       setError(errorMsg);
@@ -547,43 +1055,50 @@ const PusherChat = () => {
       return;
     }
 
-    setError(''); // Clear any existing error
+    setError(""); // Clear any existing error
     setHighlight({ button: false, textarea: false }); // Remove highlighting
 
     try {
       // Send the captured image to the server
       const formData = new FormData();
-      formData.append('message', message);
-      formData.append('file', imageSrc);
+      formData.append("message", message);
+      formData.append("file", imageSrc);
 
-      const response = await Axios.post(API_BASE_URL + '/api/chat/capture-upload', formData, {
-        headers: {
-          Authorization: 'Bearer ' + localStorage.getItem(ACCESS_TOKEN_NAME),
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      setMessage('');
+      const response = await Axios.post(
+        API_BASE_URL + "/api/chat/capture-upload",
+        formData,
+        {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem(ACCESS_TOKEN_NAME),
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      setMessage("");
       handleCaptureCloseModal();
       Swal.fire({
-        icon: 'success',
-        title: strings.upload_successful, 
-        text: strings.capture_successful,  
+        icon: "success",
+        title: t('upload_successful'),
+        text: t('capture_successful'),
       }).then((result) => {
         if (result.isConfirmed) {
           fetchMessages();
         }
       });
     } catch (error) {
-      console.error('Error uploading image', error);
-      setError(strings.failed_to_upload_file);
+      console.error("Error uploading image", error);
+      setError(t('failed_to_upload_file'));
     }
   };
 
   const uploadVideo = async (e) => {
     e.preventDefault();
 
-    const { errorMsg, highlightButton, highlightTextarea } = validateUpload(imageVideoSrc, message);
-  
+    const { errorMsg, highlightButton, highlightTextarea } = validateUpload(
+      imageVideoSrc,
+      message
+    );
+
     if (errorMsg) {
       setError(errorMsg);
       setHighlight({ button: highlightButton, textarea: highlightTextarea });
@@ -592,41 +1107,44 @@ const PusherChat = () => {
       }, 3000); // Clear highlighting after 3 seconds
       return;
     }
-  
-    setError(''); // Clear any existing error
+
+    setError(""); // Clear any existing error
     setHighlight({ button: false, textarea: false }); // Remove highlighting
-  
-    handleCaptureVideoCloseModal();  
+
+    handleCaptureVideoCloseModal();
 
     if (recordedChunks.length) {
-    //  setvideoUploading(true);
+      //  setvideoUploading(true);
       const blob = new Blob(recordedChunks, {
-        type: 'video/webm',
+        type: "video/webm",
       });
-      
+
       const formData = new FormData();
-      formData.append('message', message);
-      formData.append('file', blob, 'captured-video.webm');
+      formData.append("message", message);
+      formData.append("file", blob, "captured-video.webm");
 
       setUploadProgress(0);
 
-      await Axios.post(API_BASE_URL + '/api/chat/upload-video', formData, {
+      await Axios.post(API_BASE_URL + "/api/chat/upload-video", formData, {
         headers: {
-          Authorization: 'Bearer ' + localStorage.getItem(ACCESS_TOKEN_NAME),
-          'Content-Type': 'multipart/form-data',
-        },onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          Authorization: "Bearer " + localStorage.getItem(ACCESS_TOKEN_NAME),
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
           setUploadProgress(percentCompleted);
         },
       })
-        .then(response => {
-          console.log(response)
-          setvideoUploading(false); 
-          console.log("Video uploaded successfully");
+        .then((response) => {
+          //console.log(response);
+          setvideoUploading(false);
+          //console.log("Video uploaded successfully");
           Swal.fire({
-            icon: 'success',
-            title: strings.upload_successful, 
-            text: strings.video_capture_successful,  
+            icon: "success",
+            title: t('upload_successful'),
+            text: t('video_capture_successful'),
           }).then((result) => {
             if (result.isConfirmed) {
               setUploadProgress(0);
@@ -635,373 +1153,737 @@ const PusherChat = () => {
             }
           });
         })
-        .catch(error => {
+        .catch((error) => {
           console.error("Error uploading photo:", error);
           setvideoUploading(false);
         });
     }
-};
+  };
 
-const generateResponse = async () => {
-  let fullPrompt;
-  if (isRohtoEnabled) {
-    fullPrompt = `
-      ${strings.rohto_role_label}: ${role}
-      ${strings.rohto_problem_label}: ${problem}
-      ${strings.rohto_history_label}: ${history}
-      ${strings.rohto_goal_label}: ${goal}
-      ${strings.rohto_expectation_label}: ${expectation}
-      ${strings.rohto_for_prompt}: ${message}
+  const generateResponse = async () => {
+    let fullPrompt;
+    if (isRohtoEnabled) {
+      fullPrompt = `
+      ${t('rohto_role_label')}: ${role}
+      ${t('rohto_problem_label')}: ${problem}
+      ${t('rohto_history_label')}: ${history}
+      ${t('rohto_goal_label')}: ${goal}
+      ${t('rohto_expectation_label')}: ${expectation}
+      ${t('rohto_for_prompt')}: ${message}
     `.trim();
-  } else {
-    // If ROHTO is disabled, just send the message as the prompt
-    fullPrompt = message;
-  }
-  try {
-    const response = await Axios.post(`${API_BASE_URL}/api/chat/generate-response`, { prompt: fullPrompt }, {
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
-    });
-    // 1. Generate the Word file in backend
-      const resp = await Axios.post(`${API_BASE_URL}/api/chat/word/send`, { prompt: fullPrompt, generate: false }, {
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
-    });
-    // Optionally, save the message to DB as before
-    const highHTML = resp.data.message;
-    const aiResponseMessage = {
-      username: 'AI',
-      generate: false,
-      message: highHTML,
-      created_at: new Date().toISOString(),
-      filename: resp.data.filename || 'generated.docx', // Assuming backend returns a filename
-      type: 'docx',
-    };
-    await saveMessageToDatabase(aiResponseMessage, 'docx');
-    setIsThinking(false);
-    await Axios.post(`${API_BASE_URL}/api/chat/thinking`, { username: "AI", isThinking: false }, {
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
-    });
-    fetchMessages(); // Fetch messages after generating AI response
-  } catch (error) {
-    console.error('Error:', error);
-    setIsThinking(false);
-  }
-};
+    } else {
+      // If ROHTO is disabled, just send the message as the prompt
+      fullPrompt = message;
+    }
+    try {
+      const response = await Axios.post(
+        `${API_BASE_URL}/api/chat/generate-response`,
+        { prompt: fullPrompt, language: i18n.language },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+          },
+          timeout: 120000, // 120 seconds (2 minutes)
+        }
+      );
 
-const generateImage = async () => {
-  try {
-    const response = await Axios.post(`${API_BASE_URL}/api/chat/generate-image`, { prompt: message, generate: true }, {
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
-    });
-    const highlightedHTML = response.data.response;
-    const aiResponseMessage = {
-      username: 'AI',
-      generate: true,
-      message: highlightedHTML,
-      created_at: new Date().toISOString(),
-    };
-    await saveMessageToDatabase(aiResponseMessage);
-    setIsThinking(false);
-    await Axios.post(`${API_BASE_URL}/api/chat/thinking`, { username: "AI", isThinking: false }, {
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
-    });
-    fetchMessages(); // Fetch messages after generating AI response
-  } catch (error) {
-    console.error('Error:', error);
-    setIsThinking(false);
-  }
-};
+      const aiResponseMessage = {
+        username: "AI",
+        generate: false,
+        message: response.data.response,
+        created_at: new Date().toISOString(),
+      };
 
-const saveMessageToDatabase = async (message) => {
-  try {
-    await Axios.post(`${API_BASE_URL}/api/chat/save-message`, message, {
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}` },
-    });
-  } catch (error) {
-    console.error('Error saving message to database:', error);
-  }
-};
+      const saved = await saveMessageToDatabase(aiResponseMessage);
+      if (saved) {
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id).filter(Boolean));
+          if (saved.id && existingIds.has(saved.id)) return prev;
+          return [...prev, saved];
+        });
+      }
+
+      setIsThinking(false);
+      await Axios.post(
+        `${API_BASE_URL}/api/chat/thinking`,
+        { username: "AI", isThinking: false },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+          },
+        }
+      );
+    } catch (error) {
+      console.error("Error generating AI response:", error);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      setIsThinking(false);
+
+      // Show user-friendly error message
+      alert(t('error_generating_response'));
+    }
+  };
+
+  const generateFile = async () => {
+    let fullPrompt;
+    if (isRohtoEnabled) {
+      fullPrompt = `
+      ${t('rohto_role_label')}: ${role}
+      ${t('rohto_problem_label')}: ${problem}
+      ${t('rohto_history_label')}: ${history}
+      ${t('rohto_goal_label')}: ${goal}
+      ${t('rohto_expectation_label')}: ${expectation}
+      ${t('rohto_for_prompt')}: ${message}
+    `.trim();
+    } else {
+      fullPrompt = message;
+    }
+
+    try {
+      // 1) Save the user's prompt as a normal chat message so it appears in history
+      await Axios.post(
+        `${API_BASE_URL}/api/chat/messages`,
+        { username, message, type: "generate_file" },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+          },
+        }
+      );
+
+      const fileEndpointMap = {
+        docx: "/api/chat/word/send",
+        xlsx: "/api/chat/excel/send",
+        pdf: "/api/chat/pdf/send",
+      };
+      const targetEndpoint =
+        fileEndpointMap[generateFileType] || fileEndpointMap.docx;
+
+      setIsThinking(true);
+      await Axios.post(
+        `${API_BASE_URL}/api/chat/thinking`,
+        { username: "AI", isThinking: true },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+          },
+        }
+      );
+
+      const resp = await Axios.post(
+        `${API_BASE_URL}${targetEndpoint}`,
+        { prompt: fullPrompt, generate: false },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+          },
+          timeout: 120000,
+        }
+      );
+
+      const codeDetected = resp.data.code_detected || false;
+      const fallbackNameByType = {
+        docx: "generated.docx",
+        xlsx: "generated.xlsx",
+        pdf: "generated.pdf",
+      };
+      const filename = codeDetected
+        ? null
+        : resp.data.filename || fallbackNameByType[generateFileType];
+
+      const fileReadyMessageByType = {
+        docx: "Word file generated. Click download.",
+        xlsx: "Excel file generated. Click download.",
+        pdf: "PDF file generated. Click download.",
+      };
+
+      const aiResponseMessage = {
+        username: "AI",
+        generate: false,
+        // Don't dump the full document/CSV into chat; keep it as a downloadable file
+        message: codeDetected
+          ? resp.data.message
+          : fileReadyMessageByType[generateFileType] ||
+            "File generated. Click download.",
+        created_at: new Date().toISOString(),
+        filename: filename,
+        type: codeDetected ? "text" : generateFileType,
+        download_link: filename ? `${API_STORAGE_BASE_URL}/${filename}` : null,
+      };
+
+      const saved = await saveMessageToDatabase(aiResponseMessage);
+      if (saved) {
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id).filter(Boolean));
+          if (saved.id && existingIds.has(saved.id)) return prev;
+          return [...prev, saved];
+        });
+      }
+
+      setIsThinking(false);
+      await Axios.post(
+        `${API_BASE_URL}/api/chat/thinking`,
+        { username: "AI", isThinking: false },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+          },
+        }
+      );
+    } catch (error) {
+      console.error("Error generating file:", error);
+      setIsThinking(false);
+      alert(t("error_generating_response"));
+      try {
+        await Axios.post(
+          `${API_BASE_URL}/api/chat/thinking`,
+          { username: "AI", isThinking: false },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+            },
+          }
+        );
+      } catch (e) {}
+    }
+  };
+
+  const generateImage = async () => {
+    try {
+      const response = await Axios.post(
+        `${API_BASE_URL}/api/chat/generate-image`,
+        { prompt: message, generate: true, language: i18n.language },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+          },
+        }
+      );
+      const highlightedHTML = response.data.response;
+      const aiResponseMessage = {
+        username: "AI",
+        generate: true,
+        message: highlightedHTML,
+        created_at: new Date().toISOString(),
+        original_prompt: message, // Include original prompt for translation
+        language: i18n.language, // Include language
+      };
+      await saveMessageToDatabase(aiResponseMessage);
+      setIsThinking(false);
+      await Axios.post(
+        `${API_BASE_URL}/api/chat/thinking`,
+        { username: "AI", isThinking: false },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+          },
+        }
+      );
+      fetchMessages(); // Fetch messages after generating AI response
+    } catch (error) {
+      console.error("Error:", error);
+      setIsThinking(false);
+    }
+  };
+
+  const saveMessageToDatabase = async (message) => {
+    try {
+      const res = await Axios.post(`${API_BASE_URL}/api/chat/save-message`, message, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem(ACCESS_TOKEN_NAME)}`,
+        },
+      });
+      return res.data?.message || null;
+    } catch (error) {
+      console.error("Error saving message to database:", error);
+      return null;
+    }
+  };
 
   return (
     <>
-    <div className="chat-container">
-      <Button
-        className='rohto-button'
-        variant="outline-secondary"
-        style={{ float: 'right', marginBottom: 10 }}
-        onClick={() => setShowPromptOverlay(true)}
-        disabled={!isRohtoEnabled}
-      >
-        ROHTO
-      </Button>
-      <Form.Check
-        className='rohto-checkbox'
-        type="checkbox"
-        label={isRohtoEnabled ? strings.rohto_disable : strings.rohto_enable}
-        checked={isRohtoEnabled}
-        onChange={toggleRohto}
-        style={{ float: 'right', marginRight: 10, marginBottom: 10 }}
-      />
-      <Button variant="primary" className='message-upload-button' onClick={handleShowModal}>
-         <Upload /> {strings.upload_image_with_message}
-      </Button>
-      <Button variant="primary" className='message-capture-button' onClick={handleCaptureShowModal}>
-         <Camera /> {strings.capture_image_with_message}
-      </Button>
-      <Button variant="primary" className='message-capture-video-button' onClick={handleCaptureVideoShowModal}>
-         <CameraVideo /> {strings.capture_video_with_message}
-      </Button>
-      <Button variant="primary" className='message-record-audio-button' onClick={handleRecordAudioShowModal}>
-        <Mic /> {strings.speech_to_text}
-      </Button>
-      <div className='message-area'>
-        <MessageList messages={messages} DefaultMaleImage={DefaultMaleImage} DefaultFemaleImage={DefaultFemaleImage} />
-        <div className='active-list'>
-          {typingIndicator && <div className="typing-indicator">{typingIndicator}</div>}
-          {speechIndicator && <div className="typing-indicator">{speechIndicator}</div>}
-          {isThinking && <div className="typing-indicator">{strings.aiTypingIndicator}</div>}
+      <div className="chat-container">
+        <div style={{ float: 'right', marginRight: 10, marginLeft: 10 }}>
+          <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
+          {isRealtimeActive && (
+            <span style={{
+              marginRight: 10,
+              color: '#dc3545',
+              fontWeight: 'bold',
+              animation: 'pulse 1.5s infinite',
+              display: 'inline-block'
+            }}>
+              🎤 {t('realtime_active')}
+            </span>
+          )}
+          <Button
+            variant={isRealtimeActive ? 'danger' : 'success'}
+            onClick={() => (isRealtimeActive ? stopRealtimeConversation() : startRealtimeConversation())}
+            style={{ marginRight: 6 }}
+          >
+            {isRealtimeActive ? t('stop_realtime') : t('start_realtime')}
+          </Button>
+
         </div>
-      </div>
-      <Form className="message-form">
-        <Form.Group>
-          <Form.Check // prettier-ignore
-            type="radio"
-            className="message-ai"
-            name="ai-options"
-            label={strings.ask_from_ai}
-            checked={isAiEnabled}
-            onChange={handleAiCheckboxChange}
-            value="ai"
-          />
-          <Form.Check // prettier-ignore
-            type="radio"
-            className="generate-image-ai"
-            name="ai-options"
-            label={strings.generate_image}
-            checked={isGenerateEnabled}
-            onChange={handleGenerateCheckboxChange}
-            value="generate-image"
-          />
-      </Form.Group>
-      <Form.Group style={{ position: 'relative' }}>
-        <Form.Control
-          as="textarea"
-          className="message-input"
-          placeholder={strings.box}
-          value={showModal || showCaptureModal || showCaptureVideoShowModal ? '' : message}
-          // value={message}
-          onChange={handleTyping}
-          style={{ height: 'auto', minHeight: '50px' }}
+        <Button
+          className="rohto-button"
+          variant="outline-secondary"
+          style={{ float: "right", marginBottom: 10 }}
+          onClick={() => setShowPromptOverlay(true)}
+          disabled={!isRohtoEnabled}
+        >
+          ROHTO
+        </Button>
+
+        <Form.Check
+          className="rohto-checkbox"
+          type="checkbox"
+          label={isRohtoEnabled ? t('rohto_disable') : t('rohto_enable')}
+          checked={isRohtoEnabled}
+          onChange={toggleRohto}
+          style={{ float: "right", marginRight: 10, marginBottom: 10 }}
         />
-        <CloseButton onClick={clearMessage} style={{ position: 'absolute', top: '10px', right: '20px', color: 'white'
-       }} />
-      </Form.Group>
-        <Button variant='primary' onClick={submitMessage}>{strings.send}</Button>
-      </Form>
-    </div>
-    {/* ROHTO Prompt Overlay */}
-    <Offcanvas
-      show={showPromptOverlay}
-      onHide={() => setShowPromptOverlay(false)}
-      placement="end"
-    >
-      <Offcanvas.Header closeButton>
-        <Offcanvas.Title>ROHTO AI Prompt</Offcanvas.Title>
-      </Offcanvas.Header>
-      <Offcanvas.Body>
-        <Form>
-          <Form.Group className="mb-3">
-            <Form.Label>{strings.rohto_role_label}</Form.Label>
+        <Button
+          variant="primary"
+          className="message-upload-button"
+          onClick={handleShowModal}
+        >
+          <Upload /> {t('upload_image_with_message')}
+        </Button>
+        <Button
+          variant="primary"
+          className="message-capture-button"
+          onClick={handleCaptureShowModal}
+        >
+          <Camera /> {t('capture_image_with_message')}
+        </Button>
+        <Button
+          variant="primary"
+          className="message-capture-video-button"
+          onClick={handleCaptureVideoShowModal}
+        >
+          <CameraVideo /> {t('capture_video_with_message')}
+        </Button>
+        <Button
+          variant="primary"
+          className="message-record-audio-button"
+          onClick={handleRecordAudioShowModal}
+        >
+          <Mic /> {t('speech_to_text')}
+        </Button>
+        <div className="message-area">
+          <MessageList
+            messages={messages}
+            virtuosoRef={virtuosoRef}
+            firstItemIndex={firstItemIndex}
+            hasMore={hasMore}
+            loadingOlder={loadingOlder}
+            loadOlderMessages={loadOlderMessages}
+            //loadNewerMessages={loadNewerMessages}
+            DefaultMaleImage={DefaultMaleImage}
+            DefaultFemaleImage={DefaultFemaleImage}
+          />
+          <div className="active-list">
+            {typingIndicator && (
+              <div className="typing-indicator">{typingIndicator}</div>
+            )}
+            {speechIndicator && (
+              <div className="typing-indicator">{speechIndicator}</div>
+            )}
+            {isThinking && (
+              <div className="typing-indicator">
+                {t('aiTypingIndicator')}
+              </div>
+            )}
+          </div>
+        </div>
+        <Form className="message-form">
+          <Form.Group>
+            <Form.Check // prettier-ignore
+              type="radio"
+              className="message-ai"
+              name="ai-options"
+              label={t('ask_from_ai')}
+              checked={isAiEnabled}
+              onChange={handleAiCheckboxChange}
+              value="ai"
+            />
+            <Form.Check // prettier-ignore
+              type="radio"
+              className="generate-image-ai"
+              name="ai-options"
+              label={t('generate_image')}
+              checked={isGenerateEnabled}
+              onChange={handleGenerateCheckboxChange}
+              value="generate-image"
+            />
+            <Form.Check
+              type="checkbox"
+              style={{ marginTop: "10px" }}
+              label="Generate file"
+              checked={generateFileEnabled}
+              onChange={(e) => setGenerateFileEnabled(e.target.checked)}
+            />
+            {generateFileEnabled && (
+              <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                <Button
+                  size="sm"
+                  variant={generateFileType === "docx" ? "primary" : "outline-primary"}
+                  onClick={() => setGenerateFileType("docx")}
+                >
+                  Word
+                </Button>
+                <Button
+                  size="sm"
+                  variant={generateFileType === "xlsx" ? "primary" : "outline-primary"}
+                  onClick={() => setGenerateFileType("xlsx")}
+                >
+                  Excel
+                </Button>
+                <Button
+                  size="sm"
+                  variant={generateFileType === "pdf" ? "primary" : "outline-primary"}
+                  onClick={() => setGenerateFileType("pdf")}
+                >
+                  PDF
+                </Button>
+              </div>
+            )}
+          </Form.Group>
+          <Form.Group style={{ position: "relative" }}>
             <Form.Control
-              className='prompt-textarea'
               as="textarea"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              placeholder={strings.rohto_role_placeholder}
-              disabled={!isRohtoEnabled}
+              className="message-input"
+              placeholder={t('box')}
+              value={
+                showModal || showCaptureModal || showCaptureVideoShowModal
+                  ? ""
+                  : message
+              }
+              // value={message}
+              onChange={handleTyping}
+              style={{ height: "auto", minHeight: "50px" }}
+            />
+            <CloseButton
+              onClick={clearMessage}
+              style={{
+                position: "absolute",
+                top: "10px",
+                right: "20px",
+                color: "white",
+              }}
             />
           </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label>{strings.rohto_problem_label}</Form.Label>
-            <Form.Control
-              className='prompt-textarea'
-              as="textarea"
-              value={problem}
-              onChange={(e) => setProblem(e.target.value)}
-              placeholder={strings.rohto_problem_placeholder}
-              disabled={!isRohtoEnabled}
-            />
-          </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label>{strings.rohto_history_label}</Form.Label>
-            <Form.Control
-              className='prompt-textarea'
-              as="textarea"
-              value={history}
-              onChange={(e) => setHistory(e.target.value)}
-              placeholder={strings.rohto_history_placeholder}
-              disabled={!isRohtoEnabled}
-            />
-          </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label>{strings.rohto_goal_label}</Form.Label>
-            <Form.Control
-              className='prompt-textarea'
-              as="textarea"
-              value={goal}
-              onChange={(e) => setGoal(e.target.value)}
-              placeholder={strings.rohto_goal_placeholder}
-              disabled={!isRohtoEnabled}
-            />
-          </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label>{strings.rohto_expectation_label}</Form.Label>
-            <Form.Control
-              className='prompt-textarea'
-              as="textarea"
-              value={expectation}
-              onChange={(e) => setExpectation(e.target.value)}
-              placeholder={strings.rohto_expectation_placeholder}
-              disabled={!isRohtoEnabled}
-            />
-          </Form.Group>
+          <Button
+            variant="primary"
+            onClick={(e) => {
+              if (generateFileEnabled) return generateFile();
+              return submitMessage(e);
+            }}
+          >
+            {generateFileEnabled ? "Generate file" : t("send")}
+          </Button>
+          {/* Upload PDF Button */}
+          <Button
+            className="upload-pdf-button"
+            variant="primary"
+            onClick={() => fileInputRef.current.click()}
+          >
+            {t('upload_pdf')}
+          </Button>
+          <input
+            type="file"
+            accept="application/pdf"
+            ref={fileInputRef}
+            onChange={handlePdfChange}
+            style={{ display: "none" }}
+          />
         </Form>
-      </Offcanvas.Body>
-    </Offcanvas>
-    <Modal show={showModal} onHide={handleCloseModal}>
-      <Modal.Header className='message-upload-modal' closeButton>
-        <Modal.Title className='massage-upload-title'>{strings.upload_image_with_message}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body className='message-upload-modal'>
-        {/* Add your content for image upload and message input here */}
-        {/* For simplicity, I'll provide a basic form */}
-        
-        <form className='upload-form'>
-          <input 
-            type="file" 
-            id="upload-input" className='message-file-selector' 
-            // onChange={(e) => setSelectedFile(e.target.files[0])} 
-            onChange={handleFileChange} 
-            /> {/* Input for image upload */}
-          <label 
-            htmlFor="upload-input" 
-            className={`message-file-button ${highlight.button ? 'highlight' : ''}`}>
-              {strings.browse}
-          </label>
-          {imageUploading &&  <img className='imageUpload' src={imageUploading} />}
-          <textarea 
-            name="message" 
-            value={message} 
-            placeholder={strings.enter_your_message} className={`message-textarea ${highlight.textarea ? 'highlight' : ''}`} 
-            onChange={handleTyping} />
-          <br />
-          {error && <div className='error-message' dangerouslySetInnerHTML={{ __html: error }} />}
-          <button className='message-upload-button' onClick={handleUpload}>{strings.upload}</button>
-        </form>
-      </Modal.Body>
-      <Modal.Footer className='message-upload-modal'>
-        <Button variant="secondary" onClick={handleCloseModal}>
-        {strings.close}
-        </Button>
-      </Modal.Footer>
-    </Modal>
-    <Modal show={showCaptureModal} onHide={handleCaptureCloseModal}>
-      <Modal.Header className='message-upload-modal' closeButton>
-        <Modal.Title className='massage-upload-title'>{strings.capture_image_with_message}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body className='message-upload-modal'>
-        {/* Add your content for image upload and message input here */}
-        {/* For simplicity, I'll provide a basic form */}
-        <Webcam
-          className="Webcam-message"
-          forceScreenshotSourceSize
-          audio={false}
-          ref={webcamRef}
-          screenshotFormat="image/jpeg"
-          videoConstraints={{ width: 1920, height:1080 }}
-        />
-        <button className={`message-file-button ${highlight.button ? 'highlight' : ''}`} onClick={capture}>
-          {strings.capturePhoto}
-        </button>
-        {imageSrc && <img className='Webcam-message' src={imageSrc} />}
-        <form className='upload-form'>
-          <textarea name="message" 
-            value={message} 
-            placeholder={strings.enter_your_message}  className={`message-textarea ${highlight.textarea ? 'highlight' : ''}`} 
-            onChange={handleTyping} />
-          <br />
-          {error && <div className='error-message' dangerouslySetInnerHTML={{ __html: error }} />}
-          <button 
-            className='message-upload-button'
-            onClick={uploadCapture}>{strings.upload}</button>
-        </form>
-      </Modal.Body>
-      <Modal.Footer className='message-upload-modal'>
-        <Button variant="secondary" onClick={handleCaptureCloseModal}>
-        {strings.close}
-        </Button>
-      </Modal.Footer>
-    </Modal>
-    <Modal show={showCaptureVideoShowModal} onHide={handleCaptureVideoCloseModal}>
-      <Modal.Header className='message-upload-modal' closeButton>
-        <Modal.Title className='massage-upload-title'>{strings.capture_video_with_message}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body className='message-upload-modal'>
-        {/* Add your content for image upload and message input here */}
-        {/* For simplicity, I'll provide a basic form */}
-        <Webcam
-          className="Webcam-message"
-          forceScreenshotSourceSize
-          audio={false}
-          ref={webcamRef}
-          screenshotFormat="image/jpeg"
-          videoConstraints={{ width: 1920, height:1080 }}
-        />
-        {!isCapturingVideo ? (
-          <button 
-            className={`Webcam-button startVideo ${highlight.button ? 'highlight' : ''}`}
-            onClick={startVideoCapture}>
-              {strings.start_video}
+      </div>
+      {/* ROHTO Prompt Overlay */}
+      <Offcanvas
+        show={showPromptOverlay}
+        onHide={() => setShowPromptOverlay(false)}
+        placement="end"
+      >
+        <Offcanvas.Header closeButton>
+          <Offcanvas.Title>ROHTO AI Prompt</Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body>
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>{t('rohto_role_label')}</Form.Label>
+              <Form.Control
+                className="prompt-textarea"
+                as="textarea"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                placeholder={t('rohto_role_placeholder')}
+                disabled={!isRohtoEnabled}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>{t('rohto_problem_label')}</Form.Label>
+              <Form.Control
+                className="prompt-textarea"
+                as="textarea"
+                value={problem}
+                onChange={(e) => setProblem(e.target.value)}
+                placeholder={t('rohto_problem_placeholder')}
+                disabled={!isRohtoEnabled}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>{t('rohto_history_label')}</Form.Label>
+              <Form.Control
+                className="prompt-textarea"
+                as="textarea"
+                value={history}
+                onChange={(e) => setHistory(e.target.value)}
+                placeholder={t('rohto_history_placeholder')}
+                disabled={!isRohtoEnabled}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>{t('rohto_goal_label')}</Form.Label>
+              <Form.Control
+                className="prompt-textarea"
+                as="textarea"
+                value={goal}
+                onChange={(e) => setGoal(e.target.value)}
+                placeholder={t('rohto_goal_placeholder')}
+                disabled={!isRohtoEnabled}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>{t('rohto_expectation_label')}</Form.Label>
+              <Form.Control
+                className="prompt-textarea"
+                as="textarea"
+                value={expectation}
+                onChange={(e) => setExpectation(e.target.value)}
+                placeholder={t('rohto_expectation_placeholder')}
+                disabled={!isRohtoEnabled}
+              />
+            </Form.Group>
+          </Form>
+        </Offcanvas.Body>
+      </Offcanvas>
+      <Modal show={showModal} onHide={handleCloseModal}>
+        <Modal.Header className="message-upload-modal" closeButton>
+          <Modal.Title className="massage-upload-title">
+            {t('upload_image_with_message')}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="message-upload-modal">
+          {/* Add your content for image upload and message input here */}
+          {/* For simplicity, I'll provide a basic form */}
+
+          <form className="upload-form">
+            <input
+              type="file"
+              id="upload-input"
+              className="message-file-selector"
+              // onChange={(e) => setSelectedFile(e.target.files[0])}
+              onChange={handleFileChange}
+            />{" "}
+            {/* Input for image upload */}
+            <label
+              htmlFor="upload-input"
+              className={`message-file-button ${highlight.button ? "highlight" : ""
+                }`}
+            >
+              {t('browse')}
+            </label>
+            {imageUploading && (
+              <img className="imageUpload" alt="" src={imageUploading} />
+            )}
+            <textarea
+              name="message"
+              value={message}
+              placeholder={t('enter_your_message')}
+              className={`message-textarea ${highlight.textarea ? "highlight" : ""
+                }`}
+              onChange={handleTyping}
+            />
+            <br />
+            {error && (
+              <div
+                className="error-message"
+                dangerouslySetInnerHTML={{ __html: error }}
+              />
+            )}
+            <button className="message-upload-button" onClick={handleUpload}>
+              {t('upload')}
+            </button>
+          </form>
+        </Modal.Body>
+        <Modal.Footer className="message-upload-modal">
+          <Button variant="secondary" onClick={handleCloseModal}>
+            {t('close')}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal show={showCaptureModal} onHide={handleCaptureCloseModal}>
+        <Modal.Header className="message-upload-modal" closeButton>
+          <Modal.Title className="massage-upload-title">
+            {t('capture_image_with_message')}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="message-upload-modal">
+          {/* Add your content for image upload and message input here */}
+          {/* For simplicity, I'll provide a basic form */}
+          <Webcam
+            className="Webcam-message"
+            forceScreenshotSourceSize
+            audio={false}
+            ref={webcamRef}
+            screenshotFormat="image/jpeg"
+            videoConstraints={{ width: 1920, height: 1080 }}
+          />
+          <button
+            className={`message-file-button ${highlight.button ? "highlight" : ""
+              }`}
+            onClick={capture}
+          >
+            {t('capturePhoto')}
           </button>
-        ) : (
-          <button className="Webcam-button stopVideo" onClick={stopVideoCapture}>{strings.stop_video}</button>
-        )}
-        <div>{strings.duration}: {formatDuration(videoDuration)}</div>
-        {imageVideoSrc && <img className='Webcam-message' src={imageVideoSrc} />}
-        <form className='upload-form'>
-          <textarea 
-            name="message" 
-            value={message} 
-            placeholder={strings.enter_your_message} className={`message-textarea ${highlight.textarea ? 'highlight' : ''}`} 
-            onChange={handleTyping} />
-          <br />
-          {error && <div className='error-message' dangerouslySetInnerHTML={{ __html: error }} />}
-          <button className='message-upload-button' onClick={uploadVideo}>{strings.upload}</button>
-        </form>
-        <div style={{ marginTop: "10px" }}>
-          <progress value={uploadProgress} max="100"></progress>
-          <p>Uploading: {uploadProgress}%</p>
-        </div>
-      </Modal.Body>
-      <Modal.Footer className='message-upload-modal'>
-        <Button variant="secondary" onClick={handleCaptureVideoCloseModal}>
-          {strings.close}
-        </Button>
-      </Modal.Footer>
-    </Modal>
-    <Modal show={showRecordAudioShowModal} onHide={handleRecordAudioCloseModal}>
-      <Modal.Header className='message-upload-modal' closeButton>
-        <Modal.Title className='massage-upload-title'>{strings.speech_to_text}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body className='message-upload-modal'>
-        <AudioRecorder fetchMessages={fetchMessages} isThinking={isThinking} setIsThinking={setIsThinking} setSpeechIndicator={setSpeechIndicator} sendSpeechStatus={sendSpeechStatus} />
-      </Modal.Body>
-      <Modal.Footer className='message-upload-modal'>
-        <Button variant="secondary" onClick={handleRecordAudioCloseModal}>
-          {strings.close}
-        </Button>
-      </Modal.Footer>
-    </Modal>
-  </>
+          {imageSrc && <img className="Webcam-message" alt="" src={imageSrc} />}
+          <form className="upload-form">
+            <textarea
+              name="message"
+              value={message}
+              placeholder={t('enter_your_message')}
+              className={`message-textarea ${highlight.textarea ? "highlight" : ""
+                }`}
+              onChange={handleTyping}
+            />
+            <br />
+            {error && (
+              <div
+                className="error-message"
+                dangerouslySetInnerHTML={{ __html: error }}
+              />
+            )}
+            <button className="message-upload-button" onClick={uploadCapture}>
+              {t('upload')}
+            </button>
+          </form>
+        </Modal.Body>
+        <Modal.Footer className="message-upload-modal">
+          <Button variant="secondary" onClick={handleCaptureCloseModal}>
+            {t('close')}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal
+        show={showCaptureVideoShowModal}
+        onHide={handleCaptureVideoCloseModal}
+      >
+        <Modal.Header className="message-upload-modal" closeButton>
+          <Modal.Title className="massage-upload-title">
+            {t('capture_video_with_message')}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="message-upload-modal">
+          {/* Add your content for image upload and message input here */}
+          {/* For simplicity, I'll provide a basic form */}
+          <Webcam
+            className="Webcam-message"
+            forceScreenshotSourceSize
+            audio={false}
+            ref={webcamRef}
+            screenshotFormat="image/jpeg"
+            videoConstraints={{ width: 1920, height: 1080 }}
+          />
+          {!isCapturingVideo ? (
+            <button
+              className={`Webcam-button startVideo ${highlight.button ? "highlight" : ""
+                }`}
+              onClick={startVideoCapture}
+            >
+              {t('start_video')}
+            </button>
+          ) : (
+            <button
+              className="Webcam-button stopVideo"
+              onClick={stopVideoCapture}
+            >
+              {t('stop_video')}
+            </button>
+          )}
+          <div>
+            {t('duration')}: {formatDuration(videoDuration)}
+          </div>
+          {imageVideoSrc && (
+            <img className="Webcam-message" alt="" src={imageVideoSrc} />
+          )}
+          <form className="upload-form">
+            <textarea
+              name="message"
+              value={message}
+              placeholder={t('enter_your_message')}
+              className={`message-textarea ${highlight.textarea ? "highlight" : ""
+                }`}
+              onChange={handleTyping}
+            />
+            <br />
+            {error && (
+              <div
+                className="error-message"
+                dangerouslySetInnerHTML={{ __html: error }}
+              />
+            )}
+            <button className="message-upload-button" onClick={uploadVideo}>
+              {t('upload')}
+            </button>
+          </form>
+
+        </Modal.Body>
+        <Modal.Footer className="message-upload-modal">
+          <Button variant="secondary" onClick={handleCaptureVideoCloseModal}>
+            {t('close')}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal
+        show={showRecordAudioShowModal}
+        onHide={handleRecordAudioCloseModal}
+      >
+        <Modal.Header className="message-upload-modal" closeButton>
+          <Modal.Title className="massage-upload-title">
+            {t('speech_to_text')}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="message-upload-modal">
+          <AudioRecorder
+            fetchMessages={fetchMessages}
+            isThinking={isThinking}
+            setIsThinking={setIsThinking}
+            setSpeechIndicator={setSpeechIndicator}
+            sendSpeechStatus={sendSpeechStatus}
+          />
+        </Modal.Body>
+        <Modal.Footer className="message-upload-modal">
+          <Button variant="secondary" onClick={handleRecordAudioCloseModal}>
+            {t('close')}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
   );
 };
 

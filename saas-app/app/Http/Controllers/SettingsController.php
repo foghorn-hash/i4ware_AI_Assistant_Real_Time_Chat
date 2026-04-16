@@ -17,12 +17,13 @@ class SettingsController extends Controller
 
     public function settings(Request $request)
     {
+        $user = Auth::user();
 
-        $domain = DB::table('settings')->get();
+        $settings = DB::table('settings')->where('domain', env('APP_DOMAIN_ADMIN'))->where('system_var', 1)->get();
 
         return response()->json([
             'success' => true,
-            'data' => $domain
+            'data' => $settings
          ], 200);
     }
 }

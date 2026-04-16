@@ -1,46 +1,41 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import './UserDataComponent.css';
-import Axios from 'axios';
-import {API_BASE_URL, ACCESS_TOKEN_NAME} from '../../constants/apiConstants';
+import { API_BASE_URL, ACCESS_TOKEN_NAME } from '../../constants/apiConstants';
 import request from '../../utils/Request';
+import { useTranslation } from 'react-i18next';
 
-class UserDataComponent extends Component {
+function UserDataComponent() {
+  const { t } = useTranslation();
+  const [successMessage, setSuccessMessage] = useState(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      let message = "";
+      try {
+        const response = await request().get(API_BASE_URL + '/api/users/userdata', {
+          headers: { 'Authorization': 'Bearer ' + localStorage.getItem(ACCESS_TOKEN_NAME) }
+        });
         
-		constructor(props) {
-			super(props);
-			this.state = {
-				successMessage: null
-			};
-		};
-		
-		async componentDidMount() {
-			var message = "";
-			await request().get(API_BASE_URL+'/api/users/userdata', { headers: { 'Authorization': 'Bearer '+localStorage.getItem(ACCESS_TOKEN_NAME) }})
-				.then(function (response) {
-					if(response.status !== 200){
-					  //redirectToLogin()
-					  message = "you're unauthorized!";
-					} else {
-					  message = response.data.name;
-					}
-				})
-				.catch(function (error) {
-				  //redirectToLogin()
-				  message = "you're unauthorized!";
-				});
-				
-			this.setState({successMessage: message});
-		};
-		
-		render() {
-	  
-			return (
-                <div className="userMessage">			
-			        Welcome, {this.state.successMessage}
-                </div>				
-			);
-		};
-		
+        if (response.status !== 200) {
+          message = t('unauthorized');
+        } else {
+          message = response.data.name;
+        }
+      } catch (error) {
+        message = t('unauthorized');
+      }
+      
+      setSuccessMessage(message);
+    };
+
+    fetchUserData();
+  }, [t]);
+
+  return (
+    <div className="userMessage">
+      {t('welcome')}, {successMessage}
+    </div>
+  );
 }
 
 export default UserDataComponent;
