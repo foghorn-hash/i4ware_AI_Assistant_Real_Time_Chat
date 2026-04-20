@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { API_BASE_URL, ACCESS_TOKEN_NAME, API_DEFAULT_LANGUAGE } from "../../constants/apiConstants";
+import { Virtuoso } from 'react-virtuoso';
+import { API_BASE_URL, API_DEFAULT_LANGUAGE } from "../../constants/apiConstants";
 import Axios from 'axios';
 import HighlightedResponse from './HighlightedResponse';
 import { PlayFill, StopFill, Download } from 'react-bootstrap-icons';
@@ -175,36 +176,41 @@ const MessageList = ({ messages, DefaultMaleImage, DefaultFemaleImage }) => {
 
   return (
     <div className="messages-list">
-      {[...processedMessages].reverse().map((msg, index) => (
-        <div key={index} className="message">
-          <div className='message-date'>
-            <strong>{msg.username}: </strong>
-            <i>{msg.formatted_created_at}</i>
-            <button className="message-TTS" onClick={() => handleToggleSpeech(msg.message, msg.gender, msg.id)}>
-              {currentMessageId === msg.id ? <StopFill /> : <PlayFill />}
-            </button>
-            {msg.download_link && (
-              <a
-                href={msg.download_link}
-                className="message-download-btn"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ marginLeft: '10px' }}
-              >
-                <Download />
-              </a>
-            )}
+      <Virtuoso
+        style={{ height: '100%' }}
+        data={[...processedMessages].reverse()}
+        itemContent={(index, msg) => (
+          <div key={index} className="message">
+            <div className='message-date'>
+              <strong>{msg.username}: </strong>
+              <i>{msg.formatted_created_at}</i>
+              <button className="message-TTS" onClick={() => handleToggleSpeech(msg.message, msg.gender, msg.id)}>
+                {currentMessageId === msg.id ? <StopFill /> : <PlayFill />}
+              </button>
+              {msg.download_link && (
+                <a
+                  href={msg.download_link}
+                  className="message-download-btn"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ marginLeft: '10px' }}
+                >
+                  <Download />
+                </a>
+              )}
+            </div>
+            <div className='massage-container'>
+              <img src={msg.profilePicUrl || msg.defaultImg} className='message-avatar' alt={`Profile of ${msg.username}`} />
+              <span>
+                <HighlightedResponse markdown={msg.message} />
+              </span>
+              {renderMessageImageOrVideo(msg)}
+              <div className='message-clear' />
+            </div>
           </div>
-          <div className='massage-container'>
-            <img src={msg.profilePicUrl || msg.defaultImg} className='message-avatar' alt={`Profile of ${msg.username}`} />
-            <span>
-              <HighlightedResponse markdown={msg.message} />
-            </span>
-            {renderMessageImageOrVideo(msg)}
-            <div className='message-clear' />
-          </div>
-        </div>
-      ))}
+        )}
+        overscan={20}
+      />
       <div ref={messagesEndRef} />
 
       <CustomModal

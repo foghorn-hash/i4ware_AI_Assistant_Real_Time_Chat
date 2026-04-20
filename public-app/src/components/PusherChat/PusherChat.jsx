@@ -40,12 +40,13 @@ let strings = new LocalizedStrings({
     failed_to_upload_file: "Failed to upload file. Please try again.",
     your_browser_not_support_video_tag: "Your browser does not support the video tag.",
     aiTypingIndicator: "AI is thinking...",
-    record_audio: "Record Audio",
-    speech: "is recoding speech...",
-    speech_to_text: "Speech to Text",
-    generate_image: "Generate Image",
-    generate_word: "Generate Word Document",
-    generate_ppt: "Generate PowerPoint Presentation",
+    record_audio: "Talk with AI",
+    speech: "is recording speech...",
+    speech_to_text: "Talk with AI in real time",
+    start_realtime: "Talk with AI",
+    stop_realtime: "Stop realtime voice chat",
+    realtime_active: "Realtime voice chat active",
+    realtime_start_failed: "Failed to start realtime voice chat",
     // ROHTO engineering form fields
     rohto_role_label: "Role (who am I / who am I asking you to be?)",
     rohto_role_placeholder: "E.g. 'Act as an AI assistant' or 'I am a lawyer...'",
@@ -85,9 +86,13 @@ let strings = new LocalizedStrings({
     failed_to_upload_file: "Tiedoston lataus epäonnistui. Olehyvä ja yritä uudestaan.",
     your_browser_not_support_video_tag: "Selaimesi ei tue video tagia.",
     aiTypingIndicator: "Tekoäly miettii ...",
-    record_audio: "Nauhoita ääni",
+    record_audio: "Puhu tekoälyn kanssa",
     speech: "nauhoittaa puhetta...",
     speech_to_text: "Puhe tekstiksi",
+    start_realtime: "Puhu tekoälyn kannsa",
+    stop_realtime: "Lopeta reaaliaikainen puhechat",
+    realtime_active: "Reaaliaikainen puhechat aktiivinen",
+    realtime_start_failed: "Reaaliaikaisen puhechatin käynnistäminen epäonnistui",
     generate_image: "Luo kuva",
     generate_word: "Luo Word-asiakirja",
     generate_ppt: "Luo PowerPoint-esitys",
@@ -130,9 +135,13 @@ let strings = new LocalizedStrings({
     failed_to_upload_file: "Misslyckades med att ladda upp filen. Försök igen.",
     your_browser_not_support_video_tag: "Din webbläsare stöder inte videomarkeringen.",
     aiTypingIndicator: "AI tänker ...",
-    record_audio: "Spela in ljud",
+    record_audio: "Prata med AI",
     speech: "spela in tal...",
     speech_to_text: "Tal till text",
+    start_realtime: "Prata med AI",
+    stop_realtime: "Stoppa röstchatt i realtid",
+    realtime_active: "Röstchatt i realtid aktiv",
+    realtime_start_failed: "Kunde inte starta röstchatt i realtid",
     generate_image: "Generera bild",
     generate_word: "Generera Word-dokument",
     generate_ppt: "Generera PowerPoint-presentation",
@@ -161,9 +170,6 @@ const PusherChat = () => {
   const [speechIndicator, setSpeechIndicator] = useState('');
   const [aiTypingIndicator, setAiTypingIndicator] = useState('');
   const [isAiEnabled, setIsAiEnabled] = useState(false); // State to track AI checkbox
-  const [isGenerateEnabled, setIsGenerateEnabled] = useState(false); // State to track AI checkbox
-  const [isGenerateWordEnabled, setIsGenerateWordEnabled] = useState(false);
-  const [isGeneratePPTEnabled, setIsGeneratePPTEnabled] = useState(false);
   const typingTimeoutRef = useRef(null);
   const [showRecordAudioShowModal, setRecordAudioShowModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -182,6 +188,14 @@ const PusherChat = () => {
   const [expectation, setExpectation] = useState('');
   const [showPromptOverlay, setShowPromptOverlay] = useState(false);
   const [isRohtoEnabled, setIsRohtoEnabled] = useState(true); // Add this state
+  const [isRealtimeActive, setIsRealtimeActive] = useState(false);
+  const pcRef = useRef(null);
+  const remoteAudioRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const dataChannelRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const realtimeTextAccumRef = useRef("");
+  const lastUserTranscriptRef = useRef("");
 
   const enableRohto = () => setIsRohtoEnabled(true);
   const disableRohto = () => setIsRohtoEnabled(false);
@@ -271,8 +285,236 @@ const PusherChat = () => {
     await Axios.post(`${API_BASE_URL}/api/guest/speech`, { username, isSpeech }).catch((error) => console.error('Error sending speech status', error));
   };
 
+  const startRealtimeConversation = async () => {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/api/chat/openai-session`);
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(`HTTP ${resp.status}: ${text.substring(0, 200)}`);
+      }
+      const session = await resp.json();
+      const ephemeralKey = session?.client_secret?.value || session?.client_secret;
+      if (!ephemeralKey) {
+        throw new Error('Missing ephemeral OpenAI session key');
+      }
+
+      const pc = new RTCPeerConnection();
+      pcRef.current = pc;
+
+      pc.ontrack = (event) => {
+        const [remoteStream] = event.streams;
+        if (remoteAudioRef.current && remoteStream) {
+          remoteAudioRef.current.srcObject = remoteStream;
+        }
+      };
+
+      pc.ondatachannel = (ev) => {
+        const ch = ev.channel;
+        dataChannelRef.current = ch;
+        ch.onopen = () => {
+          const systemMsg = {
+            type: 'session.update',
+            session: {
+              instructions: `You are a helpful assistant. Respond in the same language the user speaks, only languages will be English, Finnish or Swedish. Be concise.`,
+              voice: 'alloy',
+              modalities: ['text', 'audio'],
+            },
+          };
+          try {
+            ch.send(JSON.stringify(systemMsg));
+          } catch (err) {
+            console.error('Could not send session update:', err);
+          }
+        };
+
+        ch.onmessage = (m) => {
+          try {
+            const data = JSON.parse(m.data);
+            handleOpenAIEvent(data);
+          } catch (err) {
+            console.log('Data channel message not JSON:', m.data);
+          }
+        };
+
+        ch.onerror = (err) => {
+          console.error('Data channel error:', err);
+        };
+
+        ch.onclose = () => {
+          dataChannelRef.current = null;
+        };
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log('ICE candidate', event.candidate.candidate?.slice?.(0, 100));
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        console.log('WebRTC connection state:', pc.connectionState);
+      };
+
+      const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = localStream;
+      localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US,fi-FI,sv-SE';
+
+        recognition.onresult = (event) => {
+          let finalTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' ';
+            }
+          }
+
+          if (finalTranscript && finalTranscript !== lastUserTranscriptRef.current) {
+            const userMessage = {
+              username,
+              message: finalTranscript.trim(),
+              generate: false,
+              created_at: new Date().toISOString(),
+            };
+            setMessages((prev) => [...prev, userMessage]);
+            saveMessageToDatabase(userMessage);
+            lastUserTranscriptRef.current = finalTranscript;
+          }
+        };
+
+        recognition.onend = () => {
+          if (isRealtimeActive && recognitionRef.current) {
+            try {
+              recognitionRef.current.start();
+            } catch (e) {
+              console.log('Could not restart recognition:', e);
+            }
+          }
+        };
+
+        recognition.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+        };
+
+        recognition.start();
+      }
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      const sdpResp = await fetch('https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${ephemeralKey}`,
+          'Content-Type': 'application/sdp',
+        },
+        body: offer.sdp,
+      });
+
+      if (!sdpResp.ok) {
+        throw new Error(`OpenAI API error ${sdpResp.status}`);
+      }
+
+      const answerSdp = await sdpResp.text();
+      await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+
+      setIsRealtimeActive(true);
+      sendSpeechStatus(true);
+    } catch (err) {
+      console.error('Realtime start failed', err);
+      alert(`${strings.realtime_start_failed}: ${err.message}`);
+    }
+  };
+
+  const handleOpenAIEvent = (data) => {
+    try {
+      if (data.type === 'conversation.item.input_audio_transcription.completed') {
+        const transcript = data?.transcript;
+        if (transcript) {
+          const userMessage = {
+            username,
+            message: transcript,
+            generate: false,
+            created_at: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, userMessage]);
+          saveMessageToDatabase(userMessage);
+        }
+      }
+
+      if (data.type === 'conversation.item.created' && data.item?.role === 'assistant') {
+        // no action here unless content arrives
+      }
+
+      if (data.type === 'response.content_block.delta' && data.delta?.type === 'text_delta' && data.delta?.text) {
+        realtimeTextAccumRef.current += data.delta.text;
+      }
+
+      if (data.type === 'response.done' || data.type === 'response.content_block.done') {
+        const fullText = realtimeTextAccumRef.current.trim();
+        if (fullText) {
+          const aiMessage = {
+            username: 'AI',
+            message: fullText,
+            generate: false,
+            created_at: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, aiMessage]);
+          saveMessageToDatabase(aiMessage);
+          realtimeTextAccumRef.current = '';
+        }
+      }
+
+      if (data.type === 'error') {
+        console.error('OpenAI error:', data.error);
+      }
+    } catch (err) {
+      console.error('Error handling OpenAI event:', err);
+    }
+  };
+
+  const stopRealtimeConversation = async () => {
+    try {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+          recognitionRef.current.abort();
+        } catch (e) {
+          console.log('Could not stop recognition:', e);
+        }
+        recognitionRef.current = null;
+      }
+
+      if (pcRef.current) {
+        pcRef.current.getSenders().forEach((s) => { if (s.track) s.track.stop(); });
+        pcRef.current.close();
+        pcRef.current = null;
+      }
+
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((t) => t.stop());
+        localStreamRef.current = null;
+      }
+
+      if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+      setIsRealtimeActive(false);
+      sendSpeechStatus(false);
+    } catch (err) {
+      console.error('Realtime stop failed', err);
+    }
+  };
+
   const submitMessage = async (e) => {
     e.preventDefault();
+    if (!message.trim()) return; // Don't send empty messages
+    
     await Axios.post(`${API_BASE_URL}/api/guest/messages`, { username, message });
     setMessage('');
     try {
@@ -281,14 +523,6 @@ const PusherChat = () => {
         setIsThinking(true);
         await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
         await generateResponse();
-      } else if (isGenerateEnabled) {
-        setIsThinking(true);
-        await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: true });
-        await generateImage();
-      } else if (isGenerateWordEnabled) {
-        await generateAndDownloadWord();
-      } else if (isGeneratePPTEnabled) {
-        await generateAndDownloadPPT();
       } else {
         await Axios.post(`${API_BASE_URL}/api/guest/messages`, { username, message });
         setMessage('');
@@ -302,38 +536,6 @@ const PusherChat = () => {
 
   const handleAiCheckboxChange = (e) => {
     setIsAiEnabled(e.target.checked);
-    if (e.target.checked) {
-      setIsGenerateEnabled(false);
-      setIsGenerateWordEnabled(false);
-      setIsGeneratePPTEnabled(false);
-    }
-  };
-
-  const handleGenerateCheckboxChange = (e) => {
-    setIsGenerateEnabled(e.target.checked);
-    if (e.target.checked) {
-      setIsAiEnabled(false);
-      setIsGenerateWordEnabled(false);
-      setIsGeneratePPTEnabled(false);
-    }
-  };
-
-  const handleGenerateCheckboxWordChange = (e) => {
-    setIsGenerateWordEnabled(e.target.checked);
-    if (e.target.checked) {
-      setIsAiEnabled(false);
-      setIsGenerateEnabled(false);
-      setIsGeneratePPTEnabled(false);
-    }
-  };
-
-  const handleGenerateCheckboxPPTChange = (e) => {
-    setIsGeneratePPTEnabled(e.target.checked);
-    if (e.target.checked) {
-      setIsAiEnabled(false);
-      setIsGenerateEnabled(false);
-      setIsGenerateWordEnabled(false);
-    }
   };
 
   const generateResponse = async () => {
@@ -370,96 +572,6 @@ const PusherChat = () => {
     }
   };
 
-  const generateImage = async () => {
-    try {
-      const response = await Axios.post(`${API_BASE_URL}/api/guest/generate-image`, { prompt: message, generate: true });
-      const highlightedHTML = response.data.response;
-      const aiResponseMessage = {
-        username: 'AI',
-        generate: true,
-        message: highlightedHTML,
-        created_at: new Date().toISOString(),
-      };
-      await saveMessageToDatabase(aiResponseMessage, 'image');
-      setIsThinking(false);
-      await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
-      fetchMessages(); // Fetch messages after generating AI response
-    } catch (error) {
-      console.error('Error:', error);
-      setIsThinking(false);
-    }
-  };
-
-  const generateAndDownloadWord = async () => {
-    let fullPrompt;
-    if (isRohtoEnabled) {
-      fullPrompt = `
-        ${strings.rohto_role_label}: ${role}
-        ${strings.rohto_problem_label}: ${problem}
-        ${strings.rohto_history_label}: ${history}
-        ${strings.rohto_goal_label}: ${goal}
-        ${strings.rohto_expectation_label}: ${expectation}
-        ${strings.rohto_for_prompt}: ${message}
-      `.trim();
-    } else {
-      // If ROHTO is disabled, just send the message as the prompt
-      fullPrompt = message;
-    }
-    try {
-      await Axios.post(`${API_BASE_URL}/api/guest/messages`, { username, fullPrompt });
-      fetchMessages(); // Fetch messages after sending user message
-      setIsThinking(true);
-      // 1. Generate the Word file in backend
-      const response = await Axios.post(`${API_BASE_URL}/api/chatgpt/word/send`, { prompt: fullPrompt, generate: false });
-      // Optionally, save the message to DB as before
-      const highlightedHTML = response.data.message;
-      const aiResponseMessage = {
-        username: 'AI',
-        generate: false,
-        message: highlightedHTML,
-        created_at: new Date().toISOString(),
-        filename: response.data.filename || 'generated.docx', // Assuming backend returns a filename
-        type: 'docx',
-      };
-      await saveMessageToDatabase(aiResponseMessage, 'docx');
-
-      setIsThinking(false);
-      await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
-      fetchMessages();
-    } catch (error) {
-      console.error('Error:', error);
-      setIsThinking(false);
-    }
-  };
-
-  const generateAndDownloadPPT = async () => {
-    try {
-      await Axios.post(`${API_BASE_URL}/api/guest/messages`, { username, message });
-      fetchMessages(); // Fetch messages after sending user message
-      setIsThinking(true);
-      // 1. Generate the Word file in backend
-      const response = await Axios.post(`${API_BASE_URL}/api/chatgpt/powerpoint/send`, { prompt: message, generate: false });
-      // Optionally, save the message to DB as before
-      const highlightedHTML = response.data.message;
-      const aiResponseMessage = {
-        username: 'AI',
-        generate: false,
-        message: highlightedHTML,
-        created_at: new Date().toISOString(),
-        filename: response.data.filename || 'generated.pptx', // Assuming backend returns a filename
-        type: 'pptx',
-      };
-      await saveMessageToDatabase(aiResponseMessage, 'pptx');
-
-      setIsThinking(false);
-      await Axios.post(`${API_BASE_URL}/api/guest/thinking`, { username: "AI", isThinking: false });
-      fetchMessages();
-    } catch (error) {
-      console.error('Error:', error);
-      setIsThinking(false);
-    }
-  };
-
   const saveMessageToDatabase = async (message, type) => {
     try {
       await Axios.post(`${API_BASE_URL}/api/guest/save-message`, message, type);
@@ -471,8 +583,13 @@ const PusherChat = () => {
   return (
     <>
     <div className="chat-container">
-      <Button variant="primary" className='message-record-audio-button' onClick={handleRecordAudioShowModal}>
-        <Mic />
+      <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
+      <Button
+        variant={isRealtimeActive ? 'danger' : 'success'}
+        className='message-record-audio-button'
+        onClick={() => (isRealtimeActive ? stopRealtimeConversation() : startRealtimeConversation())}
+      >
+        <Mic /> {isRealtimeActive ? strings.stop_realtime : strings.start_realtime}
       </Button>
       <MessageList messages={messages} DefaultMaleImage={DefaultMaleImage} DefaultFemaleImage={DefaultFemaleImage} />
       {typingIndicator && <div className="typing-indicator">{typingIndicator}</div>}
@@ -480,32 +597,13 @@ const PusherChat = () => {
       {isThinking && <div className="typing-indicator">{strings.aiTypingIndicator}</div>}
       <form className="message-form">
         <div className='message-ask-from-ai'>
-          <Form.Check // prettier-ignore
-            type="radio"
+          <Form.Check
+            type="checkbox"
             className="message-ai"
-            name="ai-options"
             label={strings.ask_from_ai}
             checked={isAiEnabled}
             onChange={handleAiCheckboxChange}
-            value="ai"
-          />
-          <Form.Check // prettier-ignore
-            type="radio"
-            className="generate-image-ai"
-            name="ai-options"
-            label={strings.generate_image}
-            checked={isGenerateEnabled}
-            onChange={handleGenerateCheckboxChange}
-            value="generate-image"
-          />
-          <Form.Check // prettier-ignore
-            type="radio"
-            className="generate-word-ai"
-            name="ai-options"
-            label={strings.generate_word}
-            checked={isGenerateWordEnabled}
-            onChange={handleGenerateCheckboxWordChange}
-            value="generate-word"
+            id="ai-checkbox"
           />
         </div>
         <textarea

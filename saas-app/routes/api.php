@@ -7,6 +7,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StlController;
 use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\GuestController;
 use App\Http\Controllers\NetvisorController;
 use App\Http\Controllers\AtlassianSalesController;
 use App\Http\Controllers\TimesheetController;
@@ -80,6 +81,19 @@ Route::prefix('gallery')->group(function () {
 	Route::get('/assets', [GalleryController::class, 'assets'])->name('assets.asset-items');
 	Route::post('/upload-media', [GalleryController::class, 'uploadMedia'])->name('gallery.upload-media');
 	Route::delete('/photos_videos/delete', [GalleryController::class, 'deleteMedia'])->name('gallery.delete-media');
+});
+
+Route::prefix('guest')->group(function () {
+	Route::post('/messages', [GuestController::class, 'message']);
+	Route::get('/messages', [GuestController::class, 'getMessages']);
+	Route::post('/typing', [GuestController::class, 'userTyping']);
+	Route::post('/speech', [GuestController::class, 'speech']);
+	Route::post('/generate-response', [GuestController::class, 'generateResponse']);
+	Route::post('/save-message', [GuestController::class, 'saveMessageToDatabase']);
+	Route::post('/thinking', [GuestController::class, 'thinking']);
+	Route::post('/tts', [GuestController::class, 'synthesize']);
+	Route::post('/stt', [GuestController::class, 'transcribe']);
+	Route::post('/generate-image', [GuestController::class, 'generateImage']);
 });
 
 Route::prefix('chat')->group(function () {

@@ -37,7 +37,7 @@ class ChatController extends Controller
     public function __construct(OpenAIService $openAiService)
     {
         //$this->apiToken = uniqid(base64_encode(Str::random(40)));
-        $this->middleware('auth:api');
+        $this->middleware('auth:api', ['except' => ['openAiSession']]);
         $this->user = new User;
         $this->openAiService = $openAiService;
     }
