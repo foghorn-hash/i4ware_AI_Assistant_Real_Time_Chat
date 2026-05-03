@@ -9,6 +9,7 @@ import Button from 'react-bootstrap/Button';
 import Swal from 'sweetalert2';
 import MessageList from './MessageList';
 import AudioRecorder from '../AudioRecorder/AudioRecorder';
+import SpeechAudioRecorder from '../SpeechAudioRecorder/SpeechAudioRecorder';
 import { Mic } from 'react-bootstrap-icons';
 import Form from 'react-bootstrap/Form';
 import Offcanvas from 'react-bootstrap/Offcanvas';
@@ -42,7 +43,8 @@ let strings = new LocalizedStrings({
     aiTypingIndicator: "AI is thinking...",
     record_audio: "Talk with AI",
     speech: "is recording speech...",
-    speech_to_text: "Talk with AI in real time",
+    speech_to_text: "Speech to Text",
+    talk_to_text: "Talk with AI in real time",
     start_realtime: "Talk with AI",
     stop_realtime: "Stop realtime voice chat",
     realtime_active: "Realtime voice chat active",
@@ -89,6 +91,7 @@ let strings = new LocalizedStrings({
     record_audio: "Puhu tekoälyn kanssa",
     speech: "nauhoittaa puhetta...",
     speech_to_text: "Puhe tekstiksi",
+    talk_to_text: "Puhu tekoälyn kanssa reaaliaikaisesti",
     start_realtime: "Puhu tekoälyn kannsa",
     stop_realtime: "Lopeta reaaliaikainen puhechat",
     realtime_active: "Reaaliaikainen puhechat aktiivinen",
@@ -138,6 +141,7 @@ let strings = new LocalizedStrings({
     record_audio: "Prata med AI",
     speech: "spela in tal...",
     speech_to_text: "Tal till text",
+    talk_to_text: "Prata med AI i realtid",
     start_realtime: "Prata med AI",
     stop_realtime: "Stoppa röstchatt i realtid",
     realtime_active: "Röstchatt i realtid aktiv",
@@ -172,6 +176,7 @@ const PusherChat = () => {
   const [isAiEnabled, setIsAiEnabled] = useState(false); // State to track AI checkbox
   const typingTimeoutRef = useRef(null);
   const [showRecordAudioShowModal, setRecordAudioShowModal] = useState(false);
+  const [showSpeechRecordAudioShowModal, setSpeechRecordAudioShowModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const webcamRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -203,6 +208,8 @@ const PusherChat = () => {
 
   const handleRecordAudioShowModal = () => setRecordAudioShowModal(true);
   const handleRecordAudioCloseModal = () => setRecordAudioShowModal(false);
+  const handleSpeechRecordAudioCloseModal = () => setSpeechRecordAudioShowModal(false);
+  const handleSpeechRecordAudioShowModal = () => setSpeechRecordAudioShowModal(true);
 
   var query = window.location.search.substring(1);
   var urlParams = new URLSearchParams(query);
@@ -591,6 +598,9 @@ const PusherChat = () => {
       >
         <Mic /> {isRealtimeActive ? strings.stop_realtime : strings.start_realtime}
       </Button>
+      <Button variant="primary" className='message-record-audio-button' onClick={handleSpeechRecordAudioShowModal}>
+        <Mic />
+      </Button>
       <MessageList messages={messages} DefaultMaleImage={DefaultMaleImage} DefaultFemaleImage={DefaultFemaleImage} />
       {typingIndicator && <div className="typing-indicator">{typingIndicator}</div>}
       {speechIndicator && <div className="typing-indicator">{speechIndicator}</div>}
@@ -704,13 +714,26 @@ const PusherChat = () => {
     </Offcanvas>
     <Modal show={showRecordAudioShowModal} onHide={handleRecordAudioCloseModal}>
       <Modal.Header className='message-upload-modal' closeButton>
-        <Modal.Title className='massage-upload-title'>{strings.speech_to_text}</Modal.Title>
+        <Modal.Title className='massage-upload-title'>{strings.talk_to_text}</Modal.Title>
       </Modal.Header>
       <Modal.Body className='message-upload-modal'>
         <AudioRecorder fetchMessages={fetchMessages} isThinking={isThinking} setIsThinking={setIsThinking} setSpeechIndicator={setSpeechIndicator} sendSpeechStatus={sendSpeechStatus} />
       </Modal.Body>
       <Modal.Footer className='message-upload-modal'>
         <Button variant="secondary" onClick={handleRecordAudioCloseModal}>
+          {strings.close}
+        </Button>
+      </Modal.Footer>
+    </Modal>
+    <Modal show={showSpeechRecordAudioShowModal} onHide={handleSpeechRecordAudioCloseModal}>
+      <Modal.Header className='message-upload-modal' closeButton>
+        <Modal.Title className='massage-upload-title'>{strings.speech_to_text}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body className='message-upload-modal'>
+        <SpeechAudioRecorder fetchMessages={fetchMessages} isThinking={isThinking} setIsThinking={setIsThinking} setSpeechIndicator={setSpeechIndicator} sendSpeechStatus={sendSpeechStatus} />
+      </Modal.Body>
+      <Modal.Footer className='message-upload-modal'>
+        <Button variant="secondary" onClick={handleSpeechRecordAudioCloseModal}>
           {strings.close}
         </Button>
       </Modal.Footer>
