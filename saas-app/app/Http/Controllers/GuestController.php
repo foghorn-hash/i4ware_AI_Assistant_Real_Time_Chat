@@ -26,7 +26,7 @@ class GuestController extends Controller
     public function __construct(OpenAIService $openAiService)
     {
         //$this->apiToken = uniqid(base64_encode(Str::random(40)));
-        $this->middleware('auth:api', ["except" => ["message", "getMessages", "userTyping", "speech", "generateResponse", "generateImage", "saveMessageToDatabase", "thinking", "synthesize", "transcribe"]]);
+        $this->middleware('auth:api', ["except" => ["message", "getMessages", "userTyping", "speech", "generateResponse", "generateImage", "saveMessageToDatabase", "thinking", "synthesize", "transcribe", "openAiSession"]]);
         $this->user = new User;
         $this->openAiService = $openAiService;
     }
@@ -283,6 +283,25 @@ class GuestController extends Controller
         event(new MessagePublic('Guest', $transcription));
 
         return response()->json(['success' => true, 'transcription' => $transcription]);
+    }
+
+    public function openAiSession(Request $request)
+    {
+        try {
+            $data = $this->openAiService->createRealtimeSession([
+                'model' => $request->input('model', 'gpt-4o-realtime-preview'),
+                'voice' => $request->input('voice', 'alloy'),
+            ]);
+
+            return response()->json($data);
+
+        } catch (\Exception $e) {
+            Log::error('Guest OpenAI session error: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Failed to create OpenAI session',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
 }

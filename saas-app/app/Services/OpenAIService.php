@@ -277,6 +277,41 @@ class OpenAIService
         return $data['choices'][0]['message']['content'] ?? 'Unable to analyze the PDF document at this time.';
     }
 
+    public function createRealtimeSession(array $options = [])
+    {
+        $sessionData = [
+            'type' => $options['type'] ?? 'realtime',
+            'model' => $options['model'] ?? 'gpt-4o-realtime-preview',
+            'voice' => $options['voice'] ?? 'alloy',
+        ];
+
+        if (isset($options['instructions'])) {
+            $sessionData['instructions'] = $options['instructions'];
+        }
+
+        if (isset($options['modalities'])) {
+            $sessionData['modalities'] = $options['modalities'];
+        }
+
+        $response = $this->clientGuzzle->post('/v1/realtime/client_secrets', [
+            'json' => [
+                'session' => $sessionData,
+            ],
+        ]);
+
+        $data = json_decode($response->getBody(), true);
+
+        // Ensure backward compatibility if client expects client_secret object
+        if (isset($data['value']) && !isset($data['client_secret'])) {
+            $data['client_secret'] = [
+                'value' => $data['value'],
+                'expires_at' => $data['expires_at'] ?? null,
+            ];
+        }
+
+        return $data;
+    }
+
     private function getSystemMessageByLanguage($language)
     {
         switch ($language) {

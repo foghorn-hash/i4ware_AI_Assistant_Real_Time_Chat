@@ -768,25 +768,20 @@ class ChatController extends Controller
 
     public function openAiSession(Request $request)
     {
-        $client = new Client();
-
         try {
-            $response = $client->post('https://api.openai.com/v1/realtime/sessions', [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . env('OPENAI_API_KEY'),
-                    'Content-Type'  => 'application/json',
-                ],
-                'json' => [
-                    'model' => 'gpt-4o-realtime-preview',
-                    'voice' => 'alloy',
-                ],
+            $data = $this->openAiService->createRealtimeSession([
+                'model' => $request->input('model', 'gpt-4o-realtime-preview'),
+                'voice' => $request->input('voice', 'alloy'),
             ]);
 
-            return response()->json(json_decode($response->getBody(), true));
+            return response()->json($data);
 
         } catch (\Exception $e) {
             Log::error('OpenAI session error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to create OpenAI session'], 500);
+            return response()->json([
+                'error' => 'Failed to create OpenAI session',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 

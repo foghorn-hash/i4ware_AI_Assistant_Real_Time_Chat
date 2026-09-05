@@ -94,6 +94,7 @@ Route::prefix('guest')->group(function () {
 	Route::post('/tts', [GuestController::class, 'synthesize']);
 	Route::post('/stt', [GuestController::class, 'transcribe']);
 	Route::post('/generate-image', [GuestController::class, 'generateImage']);
+	Route::get('/openai-session', [GuestController::class, 'openAiSession']);
 });
 
 Route::prefix('chat')->group(function () {
