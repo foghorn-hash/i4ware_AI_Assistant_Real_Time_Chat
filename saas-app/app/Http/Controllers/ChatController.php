@@ -770,7 +770,7 @@ class ChatController extends Controller
     {
         try {
             $data = $this->openAiService->createRealtimeSession([
-                'model' => $request->input('model', 'gpt-4o-realtime-preview'),
+                'model' => $request->input('model', env('OPENAI_REALTIME_MODEL', 'gpt-4o-mini-realtime-preview')),
                 'voice' => $request->input('voice', 'alloy'),
             ]);
 

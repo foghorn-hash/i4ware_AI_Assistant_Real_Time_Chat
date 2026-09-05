@@ -280,10 +280,16 @@ class OpenAIService
     public function createRealtimeSession(array $options = [])
     {
         $voice = $options['voice'] ?? 'alloy';
+        $model = $options['model'] ?? env('OPENAI_REALTIME_MODEL', 'gpt-4o-mini-realtime-preview');
+
+        // Replace obsolete preview alias if passed
+        if ($model === 'gpt-4o-realtime-preview') {
+            $model = env('OPENAI_REALTIME_MODEL', 'gpt-4o-mini-realtime-preview');
+        }
 
         $sessionData = [
             'type' => $options['type'] ?? 'realtime',
-            'model' => $options['model'] ?? 'gpt-4o-realtime-preview',
+            'model' => $model,
             'audio' => [
                 'output' => [
                     'voice' => $voice,
@@ -299,23 +305,31 @@ class OpenAIService
             $sessionData['modalities'] = $options['modalities'];
         }
 
-        $response = $this->clientGuzzle->post('/v1/realtime/client_secrets', [
-            'json' => [
-                'session' => $sessionData,
-            ],
-        ]);
+        try {
+            $response = $this->clientGuzzle->post('/v1/realtime/client_secrets', [
+                'json' => [
+                    'session' => $sessionData,
+                ],
+            ]);
 
-        $data = json_decode($response->getBody(), true);
+            $data = json_decode($response->getBody(), true);
 
-        // Ensure backward compatibility if client expects client_secret object
-        if (isset($data['value']) && !isset($data['client_secret'])) {
-            $data['client_secret'] = [
-                'value' => $data['value'],
-                'expires_at' => $data['expires_at'] ?? null,
-            ];
+            // Ensure backward compatibility if client expects client_secret object
+            if (isset($data['value']) && !isset($data['client_secret'])) {
+                $data['client_secret'] = [
+                    'value' => $data['value'],
+                    'expires_at' => $data['expires_at'] ?? null,
+                ];
+            }
+
+            return $data;
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            $errorBody = $e->getResponse() ? (string) $e->getResponse()->getBody() : '';
+            Log::error('OpenAI Realtime client_secrets error: ' . $errorBody);
+            $decoded = json_decode($errorBody, true);
+            $msg = $decoded['error']['message'] ?? $e->getMessage();
+            throw new \Exception($msg, $e->getCode(), $e);
         }
-
-        return $data;
     }
 
     private function getSystemMessageByLanguage($language)
