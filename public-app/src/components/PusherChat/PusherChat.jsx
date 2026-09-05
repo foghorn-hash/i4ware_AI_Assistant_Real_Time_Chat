@@ -416,7 +416,7 @@ const PusherChat = () => {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      const sdpResp = await fetch('https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview', {
+      const sdpResp = await fetch('https://api.openai.com/v1/realtime/calls', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${ephemeralKey}`,
@@ -426,7 +426,8 @@ const PusherChat = () => {
       });
 
       if (!sdpResp.ok) {
-        throw new Error(`OpenAI API error ${sdpResp.status}`);
+        const errorText = await sdpResp.text();
+        throw new Error(`OpenAI API error ${sdpResp.status}: ${errorText.substring(0, 200)}`);
       }
 
       const answerSdp = await sdpResp.text();
