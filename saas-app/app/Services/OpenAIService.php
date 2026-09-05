@@ -279,10 +279,16 @@ class OpenAIService
 
     public function createRealtimeSession(array $options = [])
     {
+        $voice = $options['voice'] ?? 'alloy';
+
         $sessionData = [
             'type' => $options['type'] ?? 'realtime',
             'model' => $options['model'] ?? 'gpt-4o-realtime-preview',
-            'voice' => $options['voice'] ?? 'alloy',
+            'audio' => [
+                'output' => [
+                    'voice' => $voice,
+                ],
+            ],
         ];
 
         if (isset($options['instructions'])) {
